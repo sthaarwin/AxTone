@@ -1,0 +1,49 @@
+# Default configuration for Tab-Gen-AI
+
+# Audio processing parameters
+audio:
+  sample_rate: 22050
+  hop_length: 512
+  n_fft: 2048
+  fmin: 80   # E2 (low E string on guitar)
+  fmax: 1200 # Highest notes
+
+# Feature extraction
+features:
+  pitch_tracking:
+    algorithm: "pyin"  # Options: pyin, crepe
+    tolerance: 0.5     # Cents tolerance
+  onset_detection:
+    threshold: 0.5
+    wait: 0.1
+  multi_pitch:
+    enabled: true
+    polyphony: 6  # Maximum number of simultaneous notes
+
+# Model parameters
+model:
+  type: "cnn_lstm"
+  input_shape: [128, 128, 1]
+  hidden_units: 128
+  learning_rate: 0.001
+  dropout_rate: 0.3
+
+# Tab generation
+tab:
+  instruments:
+    - name: "guitar"
+      strings: 6
+      tuning: ["E2", "A2", "D3", "G3", "B3", "E4"]
+    - name: "bass"
+      strings: 4
+      tuning: ["E1", "A1", "D2", "G2"]
+  formats:
+    - txt
+    - gp5
+    - pdf
+
+# Paths
+paths:
+  data: "data/"
+  models: "models/"
+  outputs: "data/outputs/"
