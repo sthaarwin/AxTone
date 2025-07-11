@@ -1,8 +1,9 @@
-# Machine learning requirements for Tab-Gen-AI
+# Machine learning requirements for AxTone
+Cython>=0.29.0
 librosa>=0.8.0
 torch>=1.7.0
 torchaudio>=0.7.0
-tensorflow>=2.3.0  # Optional, uncomment if using TensorFlow models
+# tensorflow>=2.3.0  # Optional, uncomment if using TensorFlow models
 # transformers>=4.5.0  # Uncomment if using transformer models
 scikit-learn>=0.24.0
 madmom>=0.16.1  # For onset detection

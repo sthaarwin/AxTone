@@ -1,4 +1,4 @@
-# Development requirements for Tab-Gen-AI
+# Development requirements for AxTone
 -r base.txt
 
 # Testing

@@ -1,1 +1,4 @@
 venv
+src/core/__pycache__
+data
+src/core/ai/__pycache__

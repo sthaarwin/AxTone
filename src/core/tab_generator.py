@@ -1,5 +1,5 @@
 """
-Tab generator module for Tab-Gen-AI.
+Tab Generator module for AxTone.
 Converts processed audio features into tablature notation.
 """
 
@@ -72,6 +72,31 @@ class TabGenerator:
         self.instrument_config = self._get_instrument_config(config['tab']['instruments'][0])
         logger.info(f"Initialized TabGenerator for {self.instrument_config['name']}")
         
+        # Create note-to-string mappings for MIDI conversion
+        self._create_note_mappings()
+        
+    def _create_note_mappings(self):
+        """Create mappings between MIDI note numbers and guitar strings/frets."""
+        # Get tuning information from config
+        tuning = self.instrument_config.get('tuning', ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'])
+        
+        self.string_tunings = []
+        self.note_to_string_fret = {}
+        
+        # Convert note names to MIDI note numbers
+        for string_idx, note_name in enumerate(tuning):
+            # Calculate MIDI number for the open string
+            midi_number = self._note_name_to_midi(note_name)
+            self.string_tunings.append(midi_number)
+            
+            # Map all playable notes on this string to (string, fret)
+            for fret in range(25):  # Assume a 24-fret guitar
+                note_num = midi_number + fret
+                
+                # If this is the best way to play this note (lowest fret)
+                if note_num not in self.note_to_string_fret or fret < self.note_to_string_fret[note_num][1]:
+                    self.note_to_string_fret[note_num] = (string_idx, fret)
+    
     def _get_instrument_config(self, instrument_config):
         """Get the configuration for the specified instrument."""
         return instrument_config
@@ -325,3 +350,51 @@ class TabGenerator:
         """
         logger.warning("Guitar Pro export not fully implemented")
         return False
+    
+    def generate_tab_from_notes(self, notes):
+        """
+        Generate tablature from MIDI notes.
+        
+        Args:
+            notes: List of note dictionaries with pitch, start, end, velocity
+            
+        Returns:
+            Tablature data structure (list of measures with notes)
+        """
+        # Sort notes by start time
+        sorted_notes = sorted(notes, key=lambda n: n['start'])
+        
+        # Group notes into measures (assume 4/4 time, 120 BPM)
+        # At 120 BPM, one beat is 0.5 seconds, and one measure is 2 seconds
+        measure_duration = 2.0
+        measures = {}
+        
+        for note in sorted_notes:
+            measure_idx = int(note['start'] / measure_duration) + 1
+            
+            if measure_idx not in measures:
+                measures[measure_idx] = []
+            
+            # Find the best string/fret combination for this note
+            string, fret = self.note_to_string_fret.get(
+                note['pitch'], 
+                (0, 0)  # Default to open high E string if note not found
+            )
+            
+            # Add note to the measure
+            measures[measure_idx].append({
+                'string': string,
+                'fret': fret,
+                'time': note['start'],
+                'duration': note['end'] - note['start']
+            })
+        
+        # Convert to list of measures
+        tab = []
+        for measure_idx in sorted(measures.keys()):
+            tab.append({
+                'measure': measure_idx,
+                'notes': measures[measure_idx]
+            })
+        
+        return tab

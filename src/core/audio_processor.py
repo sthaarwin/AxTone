@@ -1,5 +1,5 @@
 """
-Core audio processing functionality for Tab-Gen-AI.
+Core audio processing functionality for AxTone.
 """
 
 import os

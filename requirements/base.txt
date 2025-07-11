@@ -1,7 +1,10 @@
-# Base requirements for Tab-Gen-AI
+# Base requirements for AxTone
 numpy>=1.19.0
 scipy>=1.5.0
 pyyaml>=5.3.1
 tqdm>=4.46.0
 matplotlib>=3.2.0
 pandas>=1.0.0
+librosa>=0.8.0
+midiutil>=1.17.0
+pretty_midi>=1.1.16
