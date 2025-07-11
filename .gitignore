@@ -2,3 +2,4 @@ venv
 src/core/__pycache__
 data
 src/core/ai/__pycache__
+src/utils/__pycache__

@@ -16,6 +16,7 @@ from typing import Dict, Tuple, List, Optional
 
 # Import other core modules
 from src.core.tab_generator import TabGenerator, TabSegment, Note
+from src.utils import import_pretty_midi
 
 logger = logging.getLogger(__name__)
 
@@ -236,7 +237,8 @@ class TabAIPipeline:
         Returns:
             Path to the generated tab file
         """
-        import pretty_midi
+        # Import pretty_midi without the deprecation warning
+        pretty_midi = import_pretty_midi()
         
         # Load the MIDI file
         midi_data = pretty_midi.PrettyMIDI(midi_path)
