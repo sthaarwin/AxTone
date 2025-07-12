@@ -20,11 +20,13 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import torch
 import librosa
 import matplotlib.pyplot as plt
+import soundfile as sf
 
 from src.core.ai.models.tab_models import TabTranscriptionModel
 from src.core.tab_generator import TabGenerator, Note, TabSegment
 from src.data.dataset import GuitarSetDataset
 from src.evaluation.metrics import evaluate_tab
+from src.utils.source_separation import GuitarSourceSeparator
 
 logger = logging.getLogger(__name__)
 
@@ -65,13 +67,41 @@ def load_model(model_path: str, device: torch.device) -> TabTranscriptionModel:
     return model
 
 
+def apply_source_separation(audio_path: str, output_dir: str = None) -> str:
+    """
+    Apply source separation to isolate guitar from an audio file.
+    
+    Args:
+        audio_path: Path to the audio file
+        output_dir: Directory to save the processed file (optional)
+        
+    Returns:
+        Path to the processed audio file
+    """
+    if output_dir is None:
+        output_dir = os.path.dirname(audio_path)
+        
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Initialize the source separator
+    separator = GuitarSourceSeparator(method='spectral')
+    
+    # Apply separation
+    logger.info(f"Applying source separation to {audio_path}")
+    guitar_path = separator.separate(audio_path, output_dir)
+    
+    logger.info(f"Guitar track isolated: {guitar_path}")
+    return guitar_path
+
+
 def preprocess_audio(
     audio_path: str,
     sr: int = 44100,
     hop_length: int = 512,
     n_fft: int = 2048,
     n_mels: int = 128,
-    mono: bool = True
+    mono: bool = True,
+    apply_separation: bool = True
 ) -> Dict[str, torch.Tensor]:
     """
     Preprocess an audio file for tab generation.
@@ -83,14 +113,27 @@ def preprocess_audio(
         n_fft: FFT size
         n_mels: Number of mel bins
         mono: Whether to convert audio to mono
+        apply_separation: Whether to apply source separation
         
     Returns:
         Dictionary of preprocessed features
     """
     logger.info(f"Preprocessing audio file: {audio_path}")
     
-    # Load audio
-    y, sr = librosa.load(audio_path, sr=sr, mono=mono)
+    # Apply source separation if requested
+    if apply_separation:
+        # Create a temporary directory for processed audio
+        proc_dir = os.path.join(os.path.dirname(audio_path), 'processed')
+        os.makedirs(proc_dir, exist_ok=True)
+        
+        # Apply source separation
+        guitar_path = apply_source_separation(audio_path, proc_dir)
+        
+        # Load the separated guitar audio
+        y, sr = librosa.load(guitar_path, sr=sr, mono=mono)
+    else:
+        # Load audio without separation
+        y, sr = librosa.load(audio_path, sr=sr, mono=mono)
     
     # If we only have mono audio, create a simulated hexaphonic signal
     # by duplicating the mono signal to 6 channels
@@ -160,8 +203,8 @@ def postprocess_predictions(
     fret_probs: torch.Tensor,
     hop_length: int,
     sample_rate: int,
-    threshold: float = 0.5,
-    min_note_duration: float = 0.05  # reduced from 0.1 to 0.05 seconds
+    threshold: float = 0.3,
+    min_note_duration: float = 0.02  # reduced from 0.05 to 0.02 seconds
 ) -> List[Dict]:
     """
     Convert model predictions to a list of notes with timing information.
@@ -259,6 +302,9 @@ def postprocess_predictions(
     
     # Sort notes by start time
     notes = sorted(notes, key=lambda x: x['start_time'])
+    
+    # Log number of notes found
+    logger.info(f"Total notes detected: {len(notes)}")
     
     return notes
 
@@ -415,7 +461,8 @@ def generate_tab(args):
             hop_length=args.hop_length,
             n_fft=args.n_fft,
             n_mels=args.mel_bins,
-            mono=args.mono
+            mono=args.mono,
+            apply_separation=args.source_separation
         )
         
         # Run inference
@@ -546,11 +593,13 @@ def main():
                         help='Number of mel frequency bins')
     parser.add_argument('--mono', action='store_true',
                         help='Process audio as mono (duplicate to all strings)')
+    parser.add_argument('--source-separation', action='store_true',
+                        help='Apply source separation to isolate guitar audio')
     
     # Tab generation arguments
-    parser.add_argument('--threshold', type=float, default=0.5,
-                        help='Threshold for string activation')
-    parser.add_argument('--min-note-duration', type=float, default=0.1,
+    parser.add_argument('--threshold', type=float, default=0.3,
+                        help='Threshold for string activation (0.05-0.5)')
+    parser.add_argument('--min-note-duration', type=float, default=0.02,
                         help='Minimum note duration in seconds')
     parser.add_argument('--resolution', type=float, default=0.25,
                         help='Time resolution for tab rendering (seconds per column)')
