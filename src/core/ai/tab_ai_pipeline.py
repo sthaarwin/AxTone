@@ -410,6 +410,51 @@ class TabAIPipeline:
         logger.info(f"Exporting tab to {output_path}")
         self.tab_generator.export_tab(segments, format='txt', output_path=output_path)
         
+        # Generate PNG visualization of the tab
+        png_output_path = output_path.replace('.txt', '.png').replace('.tab', '.png')
+        try:
+            from src.visualization.tab_visualizer import TabVisualizer
+            
+            # Convert TabSegment objects to TabNote objects for visualization
+            tab_notes = []
+            for i, segment in enumerate(segments):
+                for note in segment.notes:
+                    tab_notes.append({
+                        'string': note.string,
+                        'fret': note.fret,
+                        'time_position': segment.start_time * 10 + i * 40,  # Scale time for visualization
+                        'duration': note.duration,
+                        'is_bend': note.bend is not None,
+                        'is_hammer_on': note.hammer_on,
+                        'is_pull_off': note.pull_off,
+                        'is_slide': note.slide_to is not None,
+                        'bend_value': note.bend if note.bend else 0.0
+                    })
+            
+            # Initialize the tab visualizer with the correct tuning
+            tuning = self.tab_generator.instrument_config['tuning']
+            num_strings = self.tab_generator.instrument_config['strings']
+            visualizer = TabVisualizer(num_strings=num_strings, tuning=tuning)
+            
+            # Render the tab as an image
+            logger.info(f"Generating PNG visualization: {png_output_path}")
+            visualizer.render_tab_as_image(tab_notes, output_path=png_output_path)
+            
+            # Also generate a JSON representation for potential further processing
+            json_output_path = output_path.replace('.txt', '.json').replace('.tab', '.json')
+            with open(json_output_path, 'w') as f:
+                import json
+                json.dump([{
+                    'string': note['string'],
+                    'fret': note['fret'],
+                    'time': note['time_position'],
+                    'duration': note['duration']
+                } for note in tab_notes], f, indent=2)
+            
+            logger.info(f"Tab visualizations generated: {png_output_path} and {json_output_path}")
+        except Exception as e:
+            logger.error(f"Error generating tab visualization: {e}")
+        
         logger.info(f"Tab file generated: {output_path}")
         return output_path
     
