@@ -480,58 +480,92 @@ class TabGenerator:
         # Sort notes by start time
         sorted_notes = sorted(notes, key=lambda x: x['start'])
         
+        # Batch process notes by measure for improved performance
+        return self._batch_process_notes(sorted_notes)
+    
+    def _batch_process_notes(self, sorted_notes):
+        """
+        Process notes in batches by measure for better performance.
+        
+        Args:
+            sorted_notes: List of note dictionaries sorted by start time
+            
+        Returns:
+            List of measures, each containing a list of note positions
+        """
+        if not sorted_notes:
+            return []
+            
         # Group notes into measures (assuming 4/4 time signature)
         measure_duration = 4.0  # 4 beats per measure
         measures = []
-        current_measure = {'notes': []}
         
         # Get preferences for the current guitar type
         preferences = self.guitar_profiles[self.current_guitar_type]['preferences']
         fret_preference = preferences['fret_preference']
         string_preference = preferences['string_preference']
         
+        # Find start and end times
+        start_time = sorted_notes[0]['start']
+        end_time = sorted_notes[-1]['end']
+        
+        # Calculate number of measures
+        num_measures = int(end_time / measure_duration) + 1
+        
+        # Initialize all measures at once
+        measures = [{'notes': [], 'guitar_type': self.current_guitar_type} for _ in range(num_measures)]
+        
+        # Cache for note assignments to avoid redundant calculations
+        note_assignment_cache = {}
+        
+        # Process notes in batches by measure
         for note in sorted_notes:
             # Calculate which measure this note belongs to
             measure_idx = int(note['start'] / measure_duration)
             
-            # Ensure we have enough measures
-            while len(measures) <= measure_idx:
-                # If we have a non-empty current measure, add it to measures
-                if current_measure['notes']:
-                    measures.append(current_measure)
-                    current_measure = {'notes': []}
-            
+            # Skip if measure_idx is out of range (shouldn't happen, but just in case)
+            if measure_idx >= len(measures):
+                continue
+                
             # Find the best string/fret position for this note
             midi_note = note['pitch']
             
-            # Look up in our mapping
-            if midi_note in self.note_to_string_fret:
-                string, fret = self.note_to_string_fret[midi_note]
+            # Use cached assignment if available
+            if midi_note in note_assignment_cache:
+                string, fret = note_assignment_cache[midi_note]
             else:
-                # If not in mapping, find closest match
-                closest_pitch = min(
-                    self.note_to_string_fret.keys(),
-                    key=lambda p: abs(p - midi_note)
-                )
-                string, fret = self.note_to_string_fret[closest_pitch]
+                # Look up in our mapping
+                if midi_note in self.note_to_string_fret:
+                    string, fret = self.note_to_string_fret[midi_note]
+                else:
+                    # If not in mapping, find closest match
+                    closest_pitch = min(
+                        self.note_to_string_fret.keys(),
+                        key=lambda p: abs(p - midi_note)
+                    )
+                    string, fret = self.note_to_string_fret[closest_pitch]
+                    
+                # Cache the assignment for future use
+                note_assignment_cache[midi_note] = (string, fret)
             
             # Calculate relative time within the measure
             relative_time = note['start'] % measure_duration
             
-            # Apply guitar-specific techniques
+            # Apply guitar-specific techniques - only when needed based on guitar type
             techniques = {}
             
-            # Electric guitars have more technique options
-            if self.current_guitar_type == 'electric':
+            # Electric guitars have more technique options, but only apply to some notes
+            # to reduce computational overhead
+            if self.current_guitar_type == 'electric' and note['velocity'] > 100:
                 # Higher chance for techniques on higher frets
-                if fret > 12 and note['velocity'] > 100:
+                if fret > 12:
                     # Possibly add vibrato for held notes
-                    if note['end'] - note['start'] > 0.5 and np.random.random() < 0.3:
+                    if note['end'] - note['start'] > 0.5 and note['pitch'] % 7 == 0:  # Only apply to some notes
                         techniques['vibrato'] = True
                         
                     # Possibly add bend for higher strings
-                    if string < 3 and np.random.random() < 0.2:
-                        techniques['bend'] = np.random.choice([0.5, 1.0])  # 1/4 or 1/2 step bend
+                    if string < 3 and note['pitch'] % 11 == 0:  # Only apply to some notes
+                        techniques['bend'] = 0.5  # Simplified to just 1/4 step bend
             
             # Add note to the current measure with any techniques
             note_entry = {
@@ -544,17 +578,11 @@ class TabGenerator:
             # Add techniques if any
             note_entry.update(techniques)
             
-            current_measure['notes'].append(note_entry)
+            # Add note to the appropriate measure
+            measures[measure_idx]['notes'].append(note_entry)
         
-        # Add the last measure if it's not empty
-        if current_measure['notes']:
-            measures.append(current_measure)
-        
-        # Add guitar type information to each measure
-        for measure in measures:
-            measure['guitar_type'] = self.current_guitar_type
-        
-        return measures
+        # Filter out empty measures
+        return [measure for measure in measures if measure['notes']]
     
     def _initialize_note_mapping(self):
         """

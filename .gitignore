@@ -16,6 +16,7 @@ htmlcov/
 .cache
 coverage.xml
 *.cover
+test_performance
 
 # Jupyter Notebook
 .ipynb_checkpoints

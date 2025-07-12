@@ -340,12 +340,15 @@ class TabAIPipeline:
             Path to the generated tab file
         """
         # Import pretty_midi without the deprecation warning
+        logger.info(f"Starting MIDI to tab conversion for {midi_path}")
         pretty_midi = import_pretty_midi()
         
         # Load the MIDI file
+        logger.info(f"Loading MIDI file: {midi_path}")
         midi_data = pretty_midi.PrettyMIDI(midi_path)
         
         # Extract notes from the MIDI file
+        logger.info(f"Extracting notes from MIDI file")
         notes = []
         for instrument in midi_data.instruments:
             for note in instrument.notes:
@@ -356,6 +359,13 @@ class TabAIPipeline:
                     'velocity': note.velocity
                 })
         
+        original_note_count = len(notes)
+        logger.info(f"Extracted {original_note_count} notes from MIDI file")
+        
+        # Apply note filtering and quantization to reduce computational load
+        notes = self._filter_and_quantize_notes(notes)
+        logger.info(f"After filtering and quantization: {len(notes)} notes to process (reduced by {original_note_count - len(notes)} notes)")
+        
         # Configure the TabGenerator based on guitar type
         if guitar_type == 'electric':
             # For electric guitar, we might use a different tuning or string config
@@ -365,9 +375,13 @@ class TabAIPipeline:
             self.tab_generator.configure_for_guitar_type('acoustic')
         
         # Use the TabGenerator to create tablature
+        logger.info(f"Generating tab notation from {len(notes)} notes")
         raw_tab = self.tab_generator.generate_tab_from_notes(notes)
         
+        logger.info(f"Generated raw tab with {len(raw_tab)} measures")
+        
         # Convert the dictionary-based tab format to TabSegment objects
+        logger.info(f"Converting raw tab to TabSegment objects")
         segments = []
         for measure in raw_tab:
             measure_notes = []
@@ -390,11 +404,120 @@ class TabAIPipeline:
                 end_time=end_time
             ))
         
+        logger.info(f"Created {len(segments)} TabSegment objects")
+        
         # Export the tab to the desired format
+        logger.info(f"Exporting tab to {output_path}")
         self.tab_generator.export_tab(segments, format='txt', output_path=output_path)
         
         logger.info(f"Tab file generated: {output_path}")
         return output_path
+    
+    def _filter_and_quantize_notes(self, notes):
+        """
+        Filter and quantize notes to reduce computational load
+        
+        Args:
+            notes: List of note dictionaries
+            
+        Returns:
+            Filtered and quantized list of notes
+        """
+        # If we have fewer than 500 notes, no need to filter
+        if len(notes) < 500:
+            return notes
+            
+        # Sort by start time first
+        notes = sorted(notes, key=lambda x: x['start'])
+        
+        # 1. Quantize timing to reduce the number of unique time positions
+        # Define a grid size (e.g., 16th notes at 120bpm)
+        grid_size = 0.125  # in seconds
+        
+        for note in notes:
+            # Quantize start and end times
+            note['start'] = round(note['start'] / grid_size) * grid_size
+            note['end'] = round(note['end'] / grid_size) * grid_size
+            
+            # Ensure minimum duration
+            if note['end'] <= note['start']:
+                note['end'] = note['start'] + grid_size
+        
+        # 2. Remove near-duplicate notes (same pitch at very similar times)
+        filtered_notes = []
+        note_groups = {}  # Group by quantized start time and pitch
+        
+        for note in notes:
+            key = (note['start'], note['pitch'])
+            if key not in note_groups:
+                note_groups[key] = []
+            note_groups[key].append(note)
+        
+        # For each group, keep only the note with highest velocity
+        for group in note_groups.values():
+            if group:
+                # Keep the note with highest velocity
+                best_note = max(group, key=lambda x: x['velocity'])
+                filtered_notes.append(best_note)
+        
+        # 3. If still too many notes, perform additional filtering for very dense sections
+        if len(filtered_notes) > 1000:
+            # Find regions with very high note density and thin them out
+            filtered_notes = self._thin_dense_regions(filtered_notes)
+            
+        return filtered_notes
+    
+    def _thin_dense_regions(self, notes):
+        """
+        Thin out regions with very high note density
+        
+        Args:
+            notes: List of note dictionaries
+            
+        Returns:
+            Thinned list of notes
+        """
+        # Find the total duration of the piece
+        if not notes:
+            return notes
+            
+        min_time = min(note['start'] for note in notes)
+        max_time = max(note['end'] for note in notes)
+        duration = max_time - min_time
+        
+        # If the piece is shorter than 10 seconds, no need to thin
+        if duration < 10:
+            return notes
+        
+        # Divide the piece into 1-second segments and count notes in each
+        segment_size = 1.0  # 1 second
+        segments = {}
+        
+        for note in notes:
+            segment_idx = int((note['start'] - min_time) / segment_size)
+            if segment_idx not in segments:
+                segments[segment_idx] = []
+            segments[segment_idx].append(note)
+        
+        # Find the average number of notes per segment
+        avg_notes_per_segment = len(notes) / (duration / segment_size)
+        
+        # For segments with more than 2x the average, keep only the most important notes
+        thinned_notes = []
+        
+        for segment_idx, segment_notes in segments.items():
+            if len(segment_notes) > 2 * avg_notes_per_segment and len(segment_notes) > 20:
+                # Too many notes in this segment, thin it out
+                # Sort by velocity (importance)
+                segment_notes.sort(key=lambda x: x['velocity'], reverse=True)
+                # Keep only the top 50% of notes by velocity, or at least 20 notes
+                keep_count = max(20, len(segment_notes) // 2)
+                thinned_notes.extend(segment_notes[:keep_count])
+            else:
+                # This segment is fine, keep all notes
+                thinned_notes.extend(segment_notes)
+                
+        return thinned_notes
     
     def process_batch(self, input_dir: str, output_dir: str = None) -> List[str]:
         """
