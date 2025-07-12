@@ -1,5 +1,66 @@
-venv
-src/core/__pycache__
-data
-src/core/ai/__pycache__
-src/utils/__pycache__
+# Python bytecode files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+coverage.xml
+*.cover
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+notebooks/.ipynb_checkpoints/
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Generated data files
+data/processed/
+data/outputs/
+!data/outputs/acoustic/.gitkeep
+!data/outputs/electric/.gitkeep
+
+# Trained models
+models/trained/
+*.pt
+*.pth
+*.h5
+*.onnx
+
+# Logs and temporary files
+logs/
+*.log
+tmp/
+.DS_Store
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Audio files (usually large)
+# Keep these commented if you need to include specific sample files
+*.wav
+*.mp3
+*.ogg
+*.flac
+# Exclude specific test samples
+!data/raw/test.mp3
+
+# Large dataset folders
+datasets/
+GuitarSet/

@@ -70,32 +70,76 @@ class TabGenerator:
         """
         self.config = config
         self.instrument_config = self._get_instrument_config(config['tab']['instruments'][0])
-        logger.info(f"Initialized TabGenerator for {self.instrument_config['name']}")
         
-        # Create note-to-string mappings for MIDI conversion
-        self._create_note_mappings()
+        # Define guitar type profiles for electric and acoustic guitars
+        self.guitar_profiles = {
+            'electric': {
+                'name': 'Electric Guitar',
+                'strings': 6,
+                # Standard tuning for electric guitar
+                'tuning': ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'],
+                # Typical characteristics for an electric guitar
+                'max_frets': 24,
+                'techniques': ['bend', 'vibrato', 'hammer-on', 'pull-off', 'slide', 'tapping'],
+                'preferences': {
+                    'fret_preference': 'economy',  # Prefer economical fingerings
+                    'position_shifts': 'minimize',  # Minimize position shifts
+                    'string_preference': 'natural'  # Added string preference
+                }
+            },
+            'acoustic': {
+                'name': 'Acoustic Guitar',
+                'strings': 6,
+                # Standard tuning for acoustic guitar
+                'tuning': ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'],
+                # Typical characteristics for an acoustic guitar
+                'max_frets': 20,
+                'techniques': ['hammer-on', 'pull-off', 'slide'],
+                'preferences': {
+                    'fret_preference': 'lower',  # Prefer lower frets for acoustic
+                    'position_shifts': 'natural',  # Allow more natural position shifts
+                    'string_preference': 'natural'  # Added string preference
+                }
+            }
+        }
         
-    def _create_note_mappings(self):
-        """Create mappings between MIDI note numbers and guitar strings/frets."""
-        # Get tuning information from config
-        tuning = self.instrument_config.get('tuning', ['E2', 'A2', 'D3', 'G3', 'B3', 'E4'])
+        # Default to standard guitar
+        self.current_guitar_type = 'acoustic'
         
-        self.string_tunings = []
-        self.note_to_string_fret = {}
+        # Initialize note to string/fret mapping for standard tuning
+        self.note_to_string_fret = self._initialize_note_mapping()
         
-        # Convert note names to MIDI note numbers
-        for string_idx, note_name in enumerate(tuning):
-            # Calculate MIDI number for the open string
-            midi_number = self._note_name_to_midi(note_name)
-            self.string_tunings.append(midi_number)
+    def configure_for_guitar_type(self, guitar_type: str):
+        """
+        Configure the tab generator for a specific guitar type.
+        
+        Args:
+            guitar_type: Type of guitar ('electric' or 'acoustic')
             
-            # Map all playable notes on this string to (string, fret)
-            for fret in range(25):  # Assume a 24-fret guitar
-                note_num = midi_number + fret
-                
-                # If this is the best way to play this note (lowest fret)
-                if note_num not in self.note_to_string_fret or fret < self.note_to_string_fret[note_num][1]:
-                    self.note_to_string_fret[note_num] = (string_idx, fret)
+        Returns:
+            self: Returns self for method chaining
+        """
+        if guitar_type not in self.guitar_profiles:
+            raise ValueError(f"Unsupported guitar type: {guitar_type}")
+            
+        self.current_guitar_type = guitar_type
+        profile = self.guitar_profiles[guitar_type]
+        
+        # Update the instrument configuration with the selected profile
+        self.instrument_config.update({
+            'name': profile['name'],
+            'strings': profile['strings'],
+            'tuning': profile['tuning'],
+            'max_frets': profile['max_frets']
+        })
+        
+        logger.info(f"TabGenerator configured for {profile['name']}")
+        
+        # Update note to string/fret mapping for the new guitar type
+        self.note_to_string_fret = self._initialize_note_mapping()
+        
+        # Return the updated configuration for chaining
+        return self
     
     def _get_instrument_config(self, instrument_config):
         """Get the configuration for the specified instrument."""
@@ -111,7 +155,7 @@ class TabGenerator:
         Returns:
             list: List of TabSegment objects representing the full tab
         """
-        logger.info("Generating tablature from audio features")
+        logger.info(f"Generating tablature from audio features for {self.current_guitar_type} guitar")
         
         # Extract key information from features
         pitches = features['pitch']
@@ -150,6 +194,11 @@ class TabGenerator:
         tuning = self.instrument_config['tuning']
         tuning_midi = [self._note_name_to_midi(note) for note in tuning]
         
+        # Get preferences specific to the current guitar type
+        preferences = self.guitar_profiles[self.current_guitar_type]['preferences']
+        fret_preference = preferences['fret_preference']
+        string_preference = preferences['string_preference']
+        
         # Process detected pitches at each onset
         if 'f0' in pitches:  # pYIN output
             f0 = pitches['f0']
@@ -173,15 +222,33 @@ class TabGenerator:
                 if frame_idx < len(midi_notes) and voiced[frame_idx]:
                     midi_note = midi_notes[frame_idx]
                     
-                    # Find best string and fret
-                    string, fret = self._find_best_string_and_fret(midi_note, tuning_midi)
+                    # Find best string and fret, taking into account guitar type preferences
+                    string, fret = self._find_best_string_and_fret(
+                        midi_note, 
+                        tuning_midi,
+                        fret_preference,
+                        string_preference
+                    )
                     
                     if string is not None:
+                        # For electric guitar, we might add more techniques
+                        techniques = {}
+                        
+                        if self.current_guitar_type == 'electric':
+                            # Occasionally add vibrato for electric guitar
+                            if fret > 5 and np.random.random() < 0.2:
+                                techniques['vibrato'] = True
+                            
+                            # Occasionally add bend for electric guitar high notes
+                            if fret > 12 and string < 3 and np.random.random() < 0.15:
+                                techniques['bend'] = 0.5  # 1/4 step bend
+                        
                         note = Note(
                             string=string,
                             fret=fret,
                             start_time=onset_time,
-                            duration=end_time - onset_time
+                            duration=end_time - onset_time,
+                            **techniques
                         )
                         notes.append(note)
         
@@ -205,13 +272,15 @@ class TabGenerator:
         midi_note = note_map[note] + (octave + 1) * 12
         return midi_note
     
-    def _find_best_string_and_fret(self, midi_note, tuning_midi):
+    def _find_best_string_and_fret(self, midi_note, tuning_midi, fret_preference='economy', string_preference='natural'):
         """
         Find the best string and fret to play a given MIDI note.
         
         Args:
             midi_note: MIDI note number
             tuning_midi: List of MIDI note numbers for each string
+            fret_preference: Strategy for fret selection ('lower', 'economy', 'position')
+            string_preference: Strategy for string selection ('natural', 'higher', 'lower')
             
         Returns:
             tuple: (string_index, fret_number)
@@ -220,17 +289,48 @@ class TabGenerator:
         best_fret = None
         best_score = float('inf')
         
+        # Get max frets from the current instrument config
+        max_frets = self.instrument_config.get('max_frets', 24)
+        
         for string, open_note in enumerate(tuning_midi):
             # Check if the note can be played on this string
             if midi_note >= open_note:
                 fret = int(round(midi_note - open_note))
                 
-                # Simple scoring - prefer lower frets and higher strings
-                # This is a very basic heuristic
-                score = fret + 0.1 * string
+                # Check if fret is within range for this guitar type
+                if fret > max_frets:
+                    continue
                 
-                # Check if fret is within reasonable range (e.g., 0-24)
-                if fret <= 24 and score < best_score:
+                # Calculate score based on preferences
+                score = 0
+                
+                # Fret preference scoring
+                if fret_preference == 'lower':
+                    # Strongly prefer lower frets (acoustic guitar)
+                    score += fret * 1.5
+                elif fret_preference == 'economy':
+                    # Balanced approach for electric guitar
+                    score += fret * 0.8
+                elif fret_preference == 'position':
+                    # Position-based playing (for solos)
+                    # Prefer notes in position (e.g., around fret 12)
+                    target_position = 12
+                    score += abs(fret - target_position) * 0.5
+                
+                # String preference scoring
+                if string_preference == 'higher':
+                    # Prefer higher strings (thinner) for lead parts
+                    score += (5 - string) * 0.2  # Reverse string order (string 0 is highest)
+                elif string_preference == 'lower':
+                    # Prefer lower strings (thicker) for rhythm parts
+                    score += string * 0.2
+                elif string_preference == 'natural':
+                    # Balanced approach for acoustic
+                    # Slightly prefer middle strings
+                    score += abs(string - 2) * 0.1
+                
+                # Update best if this is better
+                if score < best_score:
                     best_string = string
                     best_fret = fret
                     best_score = score
@@ -293,7 +393,7 @@ class TabGenerator:
         Returns:
             str or bool: Tab content as string (for txt) or success flag
         """
-        logger.info(f"Exporting tab in {format} format")
+        logger.info(f"Exporting tab in {format} format for {self.current_guitar_type} guitar")
         
         if format == 'txt':
             return self._export_txt(segments, output_path)
@@ -310,11 +410,27 @@ class TabGenerator:
         # Create empty tab with the right number of strings
         tab_lines = ['-' * 80 for _ in range(num_strings)]
         
+        # Add header for guitar type
+        header = f"Guitar Type: {self.current_guitar_type.capitalize()}\n"
+        header += f"Tuning: {', '.join(self.instrument_config['tuning'])}\n\n"
+        
         # Place each note on the appropriate string
         for segment in segments:
             for note in segment.notes:
                 string_idx = note.string
+                
+                # Handle techniques
                 fret_str = str(note.fret)
+                if note.bend:
+                    fret_str += "b"  # Mark bends with 'b'
+                if note.vibrato:
+                    fret_str += "~"  # Mark vibrato with '~'
+                if note.slide_to is not None:
+                    fret_str += "/"  # Mark slides with '/'
+                if note.hammer_on:
+                    fret_str += "h"  # Mark hammer-ons with 'h'
+                if note.pull_off:
+                    fret_str += "p"  # Mark pull-offs with 'p'
                 
                 # Find the right position based on start time
                 # This is a very simplified approach
@@ -332,7 +448,7 @@ class TabGenerator:
                 tab_lines[string_idx] = ''.join(line)
         
         # Combine all strings into the final tab
-        tab_txt = '\n'.join(tab_lines)
+        tab_txt = header + '\n'.join(tab_lines)
         
         # Write to file if output path is provided
         if output_path:
@@ -353,48 +469,118 @@ class TabGenerator:
     
     def generate_tab_from_notes(self, notes):
         """
-        Generate tablature from MIDI notes.
+        Generate tablature from a list of note dictionaries.
         
         Args:
-            notes: List of note dictionaries with pitch, start, end, velocity
+            notes: List of note dictionaries with pitch, start, end, and velocity
             
         Returns:
-            Tablature data structure (list of measures with notes)
+            List of measures, each containing a list of note positions
         """
         # Sort notes by start time
-        sorted_notes = sorted(notes, key=lambda n: n['start'])
+        sorted_notes = sorted(notes, key=lambda x: x['start'])
         
-        # Group notes into measures (assume 4/4 time, 120 BPM)
-        # At 120 BPM, one beat is 0.5 seconds, and one measure is 2 seconds
-        measure_duration = 2.0
-        measures = {}
+        # Group notes into measures (assuming 4/4 time signature)
+        measure_duration = 4.0  # 4 beats per measure
+        measures = []
+        current_measure = {'notes': []}
+        
+        # Get preferences for the current guitar type
+        preferences = self.guitar_profiles[self.current_guitar_type]['preferences']
+        fret_preference = preferences['fret_preference']
+        string_preference = preferences['string_preference']
         
         for note in sorted_notes:
-            measure_idx = int(note['start'] / measure_duration) + 1
+            # Calculate which measure this note belongs to
+            measure_idx = int(note['start'] / measure_duration)
             
-            if measure_idx not in measures:
-                measures[measure_idx] = []
+            # Ensure we have enough measures
+            while len(measures) <= measure_idx:
+                # If we have a non-empty current measure, add it to measures
+                if current_measure['notes']:
+                    measures.append(current_measure)
+                    current_measure = {'notes': []}
             
-            # Find the best string/fret combination for this note
-            string, fret = self.note_to_string_fret.get(
-                note['pitch'], 
-                (0, 0)  # Default to open high E string if note not found
-            )
+            # Find the best string/fret position for this note
+            midi_note = note['pitch']
             
-            # Add note to the measure
-            measures[measure_idx].append({
+            # Look up in our mapping
+            if midi_note in self.note_to_string_fret:
+                string, fret = self.note_to_string_fret[midi_note]
+            else:
+                # If not in mapping, find closest match
+                closest_pitch = min(
+                    self.note_to_string_fret.keys(),
+                    key=lambda p: abs(p - midi_note)
+                )
+                string, fret = self.note_to_string_fret[closest_pitch]
+            
+            # Calculate relative time within the measure
+            relative_time = note['start'] % measure_duration
+            
+            # Apply guitar-specific techniques
+            techniques = {}
+            
+            # Electric guitars have more technique options
+            if self.current_guitar_type == 'electric':
+                # Higher chance for techniques on higher frets
+                if fret > 12 and note['velocity'] > 100:
+                    # Possibly add vibrato for held notes
+                    if note['end'] - note['start'] > 0.5 and np.random.random() < 0.3:
+                        techniques['vibrato'] = True
+                        
+                    # Possibly add bend for higher strings
+                    if string < 3 and np.random.random() < 0.2:
+                        techniques['bend'] = np.random.choice([0.5, 1.0])  # 1/4 or 1/2 step bend
+            
+            # Add note to the current measure with any techniques
+            note_entry = {
                 'string': string,
                 'fret': fret,
-                'time': note['start'],
+                'time': relative_time,
                 'duration': note['end'] - note['start']
-            })
+            }
+            
+            # Add techniques if any
+            note_entry.update(techniques)
+            
+            current_measure['notes'].append(note_entry)
         
-        # Convert to list of measures
-        tab = []
-        for measure_idx in sorted(measures.keys()):
-            tab.append({
-                'measure': measure_idx,
-                'notes': measures[measure_idx]
-            })
+        # Add the last measure if it's not empty
+        if current_measure['notes']:
+            measures.append(current_measure)
         
-        return tab
+        # Add guitar type information to each measure
+        for measure in measures:
+            measure['guitar_type'] = self.current_guitar_type
+        
+        return measures
+    
+    def _initialize_note_mapping(self):
+        """
+        Initialize the mapping of notes to string and fret positions for the current tuning.
+        
+        Returns:
+            Dictionary mapping MIDI note numbers to tuples of (string, fret)
+        """
+        note_map = {}
+        
+        # Get the current tuning based on guitar type
+        tuning = self.guitar_profiles[self.current_guitar_type]['tuning']
+        max_frets = self.guitar_profiles[self.current_guitar_type]['max_frets']
+        
+        # Convert tuning to MIDI note numbers
+        tuning_midi = [self._note_name_to_midi(note) for note in tuning]
+        
+        # For each string
+        for string_idx, open_note in enumerate(tuning_midi):
+            # For each fret position on this string
+            for fret in range(max_frets + 1):  # Include open string (fret 0)
+                midi_note = open_note + fret
+                
+                # Store the optimal string/fret position for this note
+                # If multiple positions are possible, prefer lower frets
+                if midi_note not in note_map or note_map[midi_note][1] > fret:
+                    note_map[midi_note] = (string_idx, fret)
+        
+        return note_map
