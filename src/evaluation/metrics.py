@@ -28,6 +28,25 @@ def tab_accuracy(
     Returns:
         Accuracy score
     """
+    # Ensure pred and target have the same shape
+    if pred.shape != target.shape:
+        # Resize target to match prediction shape
+        if len(pred.shape) == 3 and len(target.shape) == 3:
+            # For 3D tensors [batch, time, channels]
+            batch_size, pred_time_steps, channels = pred.shape
+            _, target_time_steps, _ = target.shape
+            
+            if pred_time_steps != target_time_steps:
+                # Resize using nearest neighbor interpolation
+                resized_target = np.zeros_like(pred)
+                for b in range(batch_size):
+                    for c in range(channels):
+                        # Resize this channel's time dimension
+                        target_channel = target[b, :, c]
+                        indices = np.round(np.linspace(0, target_time_steps - 1, pred_time_steps)).astype(int)
+                        resized_target[b, :, c] = target_channel[indices]
+                target = resized_target
+    
     if is_fret:
         # For fret predictions, only consider positions where a string is actually played
         # Ignore positions where the target is -1 (string not played)

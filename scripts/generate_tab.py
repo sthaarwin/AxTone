@@ -6,12 +6,16 @@ tablature from input audio files.
 """
 
 import os
+import sys
 import json
 import argparse
 import logging
 import numpy as np
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
+
+# Add project root to Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import torch
 import librosa
@@ -36,8 +40,8 @@ def load_model(model_path: str, device: torch.device) -> TabTranscriptionModel:
     Returns:
         Loaded model
     """
-    # Load checkpoint
-    checkpoint = torch.load(model_path, map_location=device)
+    # Load checkpoint with weights_only=False to handle the pickle error
+    checkpoint = torch.load(model_path, map_location=device, weights_only=False)
     
     # Get model configuration
     config = checkpoint.get('config', {})
@@ -94,6 +98,28 @@ def preprocess_audio(
         # For real inference, we don't have true hexaphonic data
         # So we just duplicate the mono signal to all 6 strings
         y = np.tile(y, (6, 1))
+    # If we have stereo audio (2 channels), convert to 6 channels
+    elif isinstance(y, np.ndarray) and y.shape[0] == 2:
+        # Convert stereo to mono first
+        y_mono = np.mean(y, axis=0)
+        
+        # Apply some audio enhancements to better isolate guitar sounds
+        # 1. Apply a bandpass filter to focus on guitar frequency range (80Hz-1.2kHz)
+        y_filtered = librosa.effects.trim(y_mono, top_db=20)[0]  # Trim silence
+        y_filtered = librosa.effects.harmonic(y_filtered)  # Extract harmonic component
+        
+        # Apply bandpass filter for guitar frequency range
+        y_filtered = librosa.effects.preemphasis(y_filtered)  # Boost higher frequencies
+        
+        # 2. Normalize the audio
+        y_filtered = librosa.util.normalize(y_filtered)
+        
+        # Then duplicate to 6 channels
+        y = np.tile(y_filtered, (6, 1))
+        
+        # Log some debug info
+        logger.info(f"Audio duration: {len(y_filtered)/sr:.2f} seconds")
+        logger.info(f"Audio shape after processing: {y.shape}")
     
     # Make sure we have 6 channels (one per string)
     if y.shape[0] != 6:
@@ -135,7 +161,7 @@ def postprocess_predictions(
     hop_length: int,
     sample_rate: int,
     threshold: float = 0.5,
-    min_note_duration: float = 0.1  # minimum note duration in seconds
+    min_note_duration: float = 0.05  # reduced from 0.1 to 0.05 seconds
 ) -> List[Dict]:
     """
     Convert model predictions to a list of notes with timing information.
@@ -155,6 +181,12 @@ def postprocess_predictions(
     string_preds = (string_probs > threshold).cpu().numpy()[0]  # [time, strings]
     fret_preds = torch.argmax(fret_probs, dim=3).cpu().numpy()[0]  # [time, strings]
     
+    # Log prediction stats for debugging
+    active_strings = np.sum(string_preds)
+    total_frames = string_preds.shape[0] * string_preds.shape[1]
+    activation_percentage = (active_strings / total_frames) * 100
+    logger.info(f"Active string frames: {active_strings}/{total_frames} ({activation_percentage:.2f}%)")
+    
     # Convert frame indices to time in seconds
     frame_times = np.arange(string_preds.shape[0]) * hop_length / sample_rate
     
@@ -165,6 +197,11 @@ def postprocess_predictions(
     for string_idx in range(string_preds.shape[1]):
         # Get string activation for this string
         string_activation = string_preds[:, string_idx]
+        
+        # Count activations for this string
+        string_active_frames = np.sum(string_activation)
+        if string_active_frames > 0:
+            logger.info(f"String {string_idx+1} has {string_active_frames} active frames")
         
         # Find segments where string is played (consecutive frames)
         segments = []
@@ -318,8 +355,24 @@ def export_json(notes: List[Dict], output_path: str):
         output_path: Output file path
     """
     # Create a JSON-serializable structure
+    # Convert any NumPy types to Python native types
+    serializable_notes = []
+    for note in notes:
+        serializable_note = {}
+        for key, value in note.items():
+            # Convert NumPy types to Python native types
+            if isinstance(value, np.integer):
+                serializable_note[key] = int(value)
+            elif isinstance(value, np.floating):
+                serializable_note[key] = float(value)
+            elif isinstance(value, np.ndarray):
+                serializable_note[key] = value.tolist()
+            else:
+                serializable_note[key] = value
+        serializable_notes.append(serializable_note)
+    
     data = {
-        'notes': notes
+        'notes': serializable_notes
     }
     
     with open(output_path, 'w') as f:

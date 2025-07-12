@@ -5,6 +5,7 @@ This script trains the TabTranscriptionModel on the GuitarSet dataset.
 """
 
 import os
+import sys
 import time
 import json
 import logging
@@ -12,6 +13,9 @@ import argparse
 import numpy as np
 from pathlib import Path
 from datetime import datetime
+
+# Add project root to Python path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import torch
 import torch.nn as nn
@@ -79,7 +83,7 @@ def train_model(args):
     # Define loss function and optimizer
     optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=5, verbose=True
+        optimizer, mode='min', factor=0.5, patience=5
     )
     
     # Training loop

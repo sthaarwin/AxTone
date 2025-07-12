@@ -9,3 +9,4 @@ scikit-learn>=0.24.0
 madmom>=0.16.1  # For onset detection
 mir_eval>=0.6  # For music evaluation metrics
 jams
+tensorboard>=2.0.0  # For training visualization and loggingKW

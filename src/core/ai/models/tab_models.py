@@ -198,36 +198,36 @@ class TabTranscriptionModel(nn.Module):
         # Forward pass
         string_logits, fret_logits = self.forward(x)
         
-        # Reshape targets to match predictions
+        # Get actual dimensions
         batch_size, channels, time_steps = string_targets.size()
-        downsampled_time_steps = time_steps // 16
+        _, pred_time_steps, _ = string_logits.size()
         
-        # Downsample targets to match prediction time steps
+        # Downsample targets to match prediction time steps exactly
         string_targets_ds = F.interpolate(
             string_targets.float().unsqueeze(1),
-            size=(channels, downsampled_time_steps),
+            size=(channels, pred_time_steps),
             mode='nearest'
         ).squeeze(1)
         
         fret_targets_ds = F.interpolate(
             fret_targets.float().unsqueeze(1),
-            size=(channels, downsampled_time_steps),
+            size=(channels, pred_time_steps),
             mode='nearest'
         ).squeeze(1)
         
         # Rearrange dimensions to match prediction shape
-        string_targets_ds = string_targets_ds.permute(0, 2, 1)  # [batch_size, downsampled_time_steps, 6]
-        fret_targets_ds = fret_targets_ds.permute(0, 2, 1)      # [batch_size, downsampled_time_steps, 6]
+        string_targets_ds = string_targets_ds.permute(0, 2, 1)  # [batch_size, pred_time_steps, 6]
+        fret_targets_ds = fret_targets_ds.permute(0, 2, 1)      # [batch_size, pred_time_steps, 6]
         
         # Calculate string activation loss (binary cross-entropy)
         string_loss_fn = nn.BCEWithLogitsLoss(reduction='mean')
         string_loss = string_loss_fn(string_logits, string_targets_ds)
         
         # Calculate fret position loss (cross-entropy)
-        # First reshape fret_logits to [batch_size * downsampled_time_steps * 6, max_fret+1]
+        # First reshape fret_logits to [batch_size * pred_time_steps * 6, max_fret+1]
         fret_logits_flat = fret_logits.reshape(-1, self.max_fret + 1)
         
-        # Convert targets to class indices and reshape to [batch_size * downsampled_time_steps * 6]
+        # Convert targets to class indices and reshape to [batch_size * pred_time_steps * 6]
         fret_targets_flat = fret_targets_ds.long().reshape(-1)
         
         # Only calculate loss for frames where a string is played (fret >= 0)
