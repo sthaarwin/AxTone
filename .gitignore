@@ -29,6 +29,7 @@ env/
 ENV/
 
 # Generated data files and datasets
+data
 data/processed/
 data/outputs/
 data/demo_dataset/
@@ -40,6 +41,7 @@ data/*/processed_tabs/
 !data/outputs/electric/.gitkeep
 
 # Trained models and weights
+models
 models/trained/
 models/pretrained/*.pt
 models/pretrained/*.pth
