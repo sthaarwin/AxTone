@@ -6,7 +6,16 @@ tqdm>=4.46.0
 matplotlib>=3.2.0
 pandas>=1.0.0
 librosa>=0.8.0
-midiutil>=1.17.0
-pretty_midi>=1.1.16
+midiutil>=1.2.1
+pretty_midi>=0.2.8
 demucs 
-spleeter 
+spleeter
+
+# Web scraping dependencies for tab scraper
+selenium>=4.0.0
+requests>=2.25.0
+beautifulsoup4>=4.9.0
+webdriver-manager>=3.8.0
+
+# Additional data processing
+pathlib2>=2.3.0  # For better path handling on older Python versions

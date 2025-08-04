@@ -1,0 +1,17 @@
+.idea/
+*.pyc
+vvenv/
+*.json
+*.log
+dist/
+src/geckodriver
+src/ui.py
+*.spec
+build/
+*.zip
+*.sh
+*.bat
+*.exe
+src/settings.cfg
+tab_scraper/
+release_notes.txt

@@ -1,0 +1,66 @@
+# Tab Scraper Configuration for AxTone
+# This file configures the tab scraping and dataset generation process
+
+scraper:
+  # Browser settings
+  headless: true
+  download_timeout: 15
+  request_delay: 1
+  max_pages_per_query: 5
+  default_tab_types: 
+    - "Tabs"
+    - "Chords"
+
+processing:
+  # Tab processing settings
+  max_sequence_length: 1024
+  min_sequence_length: 10
+  standard_tuning:
+    - "E"
+    - "A" 
+    - "D"
+    - "G"
+    - "B"
+    - "E"
+
+dataset:
+  # Dataset split ratios
+  train_split: 0.8
+  val_split: 0.1
+  test_split: 0.1
+
+output:
+  # Output directory structure
+  base_dir: "data"
+  scraped_dir: "scraped_tabs"
+  processed_dir: "processed_tabs"
+
+# Popular queries for diverse dataset generation
+popular_queries:
+  classic_rock:
+    - "led zeppelin"
+    - "pink floyd"
+    - "the beatles"
+    - "queen"
+    - "deep purple"
+    - "black sabbath"
+    
+  modern_rock:
+    - "foo fighters"
+    - "radiohead"
+    - "pearl jam"
+    - "nirvana"
+    - "metallica"
+    
+  popular_songs:
+    - "stairway to heaven"
+    - "sweet child o mine"
+    - "comfortably numb"
+    - "hotel california"
+    - "smoke on the water"
+    
+  techniques:
+    - "fingerpicking"
+    - "guitar solo"
+    - "acoustic guitar"
+    - "classical guitar"
