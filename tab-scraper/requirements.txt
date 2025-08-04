@@ -1,21 +1,35 @@
-cairocffi==1.0.2
-CairoSVG==2.5.1
-certifi==2019.3.9
-cffi==1.12.3
-chardet==3.0.4
-cssselect2==0.2.1
-defusedxml==0.6.0
-html5lib==1.0.1
-idna==2.8
-Pillow==9.0.0
-pycparser==2.19
-Pyphen==0.9.5
-PyQt5==5.12.1
-PyQt5-sip==4.19.15
-requests==2.21.0
-selenium==3.141.0
-six==1.12.0
-soupsieve==1.9.1
-tinycss2==1.0.2
-urllib3==1.26.5
-webencodings==0.5.1
+# DEPRECATED: Legacy requirements for PyQt5-based GUI scraper
+# This scraper has been replaced by the modern Selenium-based system
+# in the main AxTone project.
+#
+# For the new system, install requirements from:
+# - requirements/base.txt (main project requirements)
+#
+# The new system uses:
+# - selenium>=4.0.0
+# - requests>=2.25.0  
+# - beautifulsoup4>=4.9.0
+# - webdriver-manager>=3.8.0
+#
+# Install with: pip install -r ../requirements/base.txt
+
+# Legacy PyQt5 requirements (no longer needed):
+# cairocffi==1.0.2
+# CairoSVG==2.5.1
+# certifi==2019.3.9
+# cffi==1.12.3
+# chardet==3.0.4
+# cssselect2==0.2.1
+# defusedxml==0.6.0
+# html5lib==1.0.1
+# idna==2.8
+# Pillow==9.0.0
+# pycparser==2.19
+# pyphen==0.9.5
+# PyQt5==5.12.2
+# PyQt5-sip==4.19.17
+# requests==2.22.0
+# six==1.12.0
+# tinycss2==1.0.2
+# urllib3==1.25.3
+# webencodings==0.5.1
