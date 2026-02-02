@@ -220,19 +220,3 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - Music Information Retrieval (MIR) community
 - Guitar pedagogical research on optimal fingering
 
-## Citation
-
-If you use this code in your research, please cite:
-
-```bibtex
-@software{axtone2026,
-  title={AxTone: Graph-Based Guitar Tablature Optimization},
-  author={Your Name},
-  year={2026},
-  url={https://github.com/yourusername/axtone}
-}
-```
-
----
-
-Made with ❤️ for guitarists and music technologists
