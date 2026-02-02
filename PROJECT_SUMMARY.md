@@ -1,25 +1,61 @@
-# Project Summary: FretboardOptimizer
+# Project Summary: AxTone - Vocal to Guitar Tab Converter
 
 ## ✅ Completed Implementation
 
-I've built a complete **FretboardOptimizer** system that converts MIDI melodies into optimized guitar tablature using **Dijkstra's Algorithm**. Here's what was delivered:
+I've built a complete **AxTone** system that converts audio melodies (vocals, instruments) into optimized guitar tablature using **AI-powered pitch detection** and **Dijkstra's Algorithm**. The system provides a full pipeline from raw audio to playable guitar tabs.
+
+### System Overview
+```
+Audio File → Pitch Detection (AI) → MIDI Notes → Graph Optimization → Guitar Tablature
+```
 
 ---
 
 ## 📁 Files Created
 
 ### Core Implementation
-1. **`src/fretboard_optimizer.py`** (450+ lines)
+1. **`main.py`** (214 lines) - CLI Entry Point
+   - Command-line interface for audio-to-tab conversion
+   - Argument parsing with multiple options
+   - Pipeline orchestration (extract → optimize → format)
+   - Preset tuning support (standard, drop-d, drop-c, open-g, dadgad)
+   - Progress reporting and error handling
+
+2. **`src/extractor.py`** - Audio-to-MIDI Extraction
+   - `AudioExtractor` class with multiple pitch detection methods
+   - Basic Pitch integration (neural network-based)
+   - PYIN integration (signal processing-based)
+   - MIDI note extraction with onset/offset detection
+   - MIDI file export functionality
+   - Note name conversion utilities
+
+3. **`src/optimizer.py`** - Optimizer Wrapper
+   - `FretboardOptimizer` wrapper for the main system
+   - Integration with extractor and formatter
+   - Configuration management
+
+4. **`src/fretboard_optimizer.py`** (450+ lines) - Core Algorithm
    - `FretboardOptimizer` class with complete Dijkstra implementation
    - `MidiNote` and `FretPosition` dataclasses
    - Graph construction with adjacency list
    - Intelligent cost function with multiple factors
-   - ASCII tablature formatter
-   - Helper functions
+   - Helper functions for position calculations
 
-2. **`src/__init__.py`**
+5. **`src/formatter.py`** - Tablature Formatting
+   - `TablatureFormatter` class for ASCII tab generation
+   - Standard 6-line guitar tab layout
+   - Performance statistics calculation
+   - File save functionality with detailed mode
+   - Clean, readable output formatting
+
+6. **`src/utils.py`** - Audio Utilities
+   - Audio preprocessing (normalization, trimming)
+   - Librosa integration for audio processing
+   - Utility functions for audio manipulation
+
+7. **`src/__init__.py`**
    - Package initialization
-   - Clean API exports
+   - Clean API exports for all modules
 
 ### Documentation
 3. **`README.md`** (Comprehensive)
@@ -49,20 +85,7 @@ I've built a complete **FretboardOptimizer** system that converts MIDI melodies 
    - Performance metrics
 
 ### Examples & Demos
-7. **`demo.py`** (Simple Demo)
-   - Quick demonstration
-   - C major scale example
-   - Cost analysis
-   - Easy to run and understand
-
-8. **`examples.py`** (Comprehensive Examples)
-   - 6+ different example scenarios
-   - Scales, melodies with jumps, chromatic passages
-   - Custom tunings (Drop-D)
-   - Cost function comparisons
-   - "Twinkle Twinkle Little Star"
-
-9. **`notebooks/fretboard_optimizer_tutorial.ipynb`** (Interactive Tutorial)
+7. **`notebooks/fretboard_optimizer_tutorial.ipynb`** (Interactive Tutorial)
    - 8 sections with runnable code
    - Visualizations with matplotlib
    - Cost heatmaps
@@ -70,24 +93,51 @@ I've built a complete **FretboardOptimizer** system that converts MIDI melodies 
    - Comparison studies
 
 ### Testing
-10. **`tests/test_fretboard_optimizer.py`** (Comprehensive Test Suite)
+8. **`tests/test_fretboard_optimizer.py`** (Comprehensive Test Suite)
     - 30+ unit tests
     - Tests for all major components
     - Edge case coverage
     - Cost function validation
     - Performance tests
 
+9. **`tests/test_dijkstra.py`** (Algorithm Tests)
+    - Dijkstra algorithm validation
+    - Graph construction tests
+    - Path finding correctness
+
+### Additional Files
+10. **`requirements.txt`** - Dependencies
+    - Core: numpy, scipy, librosa
+    - MIDI extraction: basic-pitch, pretty-midi, mido
+    - Visualization: matplotlib
+    - Build tools: Cython, setuptools
+
+11. **`data/` directories** - Data Organization
+    - `raw/`: Input audio files
+    - `processed/`: Preprocessed audio
+    - `output/`: Generated tablature and MIDI files
+
 ---
 
 ## 🎯 Key Features Implemented
 
-### 1. Graph Construction
+### 1. Audio-to-MIDI Extraction
+- ✅ **Basic Pitch** integration (Spotify's neural network model)
+- ✅ **PYIN** integration (probabilistic YIN algorithm)
+- ✅ Automatic pitch detection from audio files (MP3, WAV, etc.)
+- ✅ Note onset and offset detection
+- ✅ Configurable minimum note duration filtering
+- ✅ MIDI file export for extracted notes
+- ✅ Audio preprocessing (normalization, trimming)
+- ✅ Pitch range detection and reporting
+
+### 2. Graph Construction
 - ✅ Identifies all possible (string, fret) positions for each note
 - ✅ Creates adjacency list connecting consecutive note positions
 - ✅ Virtual START/END nodes for clean path finding
 - ✅ Efficient sparse graph representation
 
-### 2. Cost Function
+### 3. Cost Function
 Transition cost = f(fret distance, string jumps, stretch, open strings)
 
 ```python
@@ -100,27 +150,37 @@ Cost = (|Δfret| × 1.0) + (|Δstring| × 0.5) + penalties + bonuses
 - ✅ **Open String Bonus**: Slight preference for fret 0 (bonus: -0.3)
 - ✅ **Fully Customizable**: All parameters can be adjusted
 
-### 3. Dijkstra's Algorithm
+### 4. Dijkstra's Algorithm
 - ✅ Implemented with `heapq` priority queue
 - ✅ Time complexity: O((V + E) log V) ≈ O(N log N)
 - ✅ Space complexity: O(V + E) ≈ O(N)
 - ✅ Path reconstruction from previous pointers
 - ✅ Handles disconnected graphs gracefully
 
-### 4. Tablature Formatting
+### 5. Tablature Formatting
 - ✅ Clean ASCII guitar tab output
 - ✅ Standard 6-string layout (e-B-G-D-A-E)
 - ✅ Automatic line wrapping
 - ✅ Header with title
 - ✅ Footer with statistics (avg fret movement, string jumps)
 
-### 5. Guitar Support
+### 6. Guitar Support
 - ✅ Standard tuning (E2-A2-D3-G3-B3-E4)
 - ✅ Custom tunings (Drop-D, Open-G, etc.)
 - ✅ 7-string guitar support
 - ✅ Configurable fret range (default: 0-22)
 
-### 6. Utility Functions
+### 7. Command-Line Interface
+- ✅ Complete CLI with argparse
+- ✅ Multiple tuning presets (standard, drop-d, drop-c, open-g, dadgad)
+- ✅ Custom tuning support via MIDI numbers
+- ✅ Audio preprocessing options
+- ✅ MIDI export option
+- ✅ Detailed output mode
+- ✅ Progress reporting and error handling
+- ✅ Helpful usage examples and documentation
+
+### 8. Utility Functions
 - ✅ `get_possible_positions()`: Find all playable positions for a note
 - ✅ `calculate_transition_cost()`: Compute transition difficulty
 - ✅ `midi_number_to_note_name()`: Convert MIDI to note names
@@ -162,9 +222,49 @@ Tested on various melody lengths:
 
 ## 🎸 Usage Examples
 
-### Basic
+### Command-Line (Audio to Tab)
+```bash
+# Basic usage
+python main.py vocals.mp3
+
+# With all options
+python main.py vocals.mp3 \
+    --output my_tab.txt \
+    --method basic_pitch \
+    --tuning drop-d \
+    --preprocess \
+    --save-midi \
+    --detailed
+
+# Different tunings
+python main.py melody.mp3 --tuning standard
+python main.py melody.mp3 --tuning drop-d
+python main.py melody.mp3 --tuning "40,45,50,55,59,64"  # Custom
+```
+
+### Python API (Direct Audio)
+```python
+from src.extractor import AudioExtractor
+from src.optimizer import FretboardOptimizer
+from src.formatter import TablatureFormatter
+
+# Extract MIDI from audio
+extractor = AudioExtractor(method='basic_pitch')
+midi_notes = extractor.extract('vocals.mp3')
+
+# Optimize fingering
+optimizer = FretboardOptimizer()
+path = optimizer.optimize(midi_notes)
+
+# Format and save
+formatter = TablatureFormatter()
+formatter.save(path, 'output.txt', midi_sequence=midi_notes)
+```
+
+### Python API (Direct MIDI)
 ```python
 from src.fretboard_optimizer import FretboardOptimizer, MidiNote
+from src.formatter import TablatureFormatter
 
 melody = [
     MidiNote(60, 0.0, 0.5),  # C4
@@ -173,22 +273,25 @@ melody = [
 ]
 
 optimizer = FretboardOptimizer()
-path, tablature = optimizer.optimize(melody)
-print(tablature)
+path = optimizer.optimize(melody)
+
+formatter = TablatureFormatter()
+print(formatter.format(path, melody))
 ```
 
-### Advanced
+### Advanced Customization
 ```python
-# Drop-D tuning
+# Drop-D tuning with custom parameters
 drop_d = [38, 45, 50, 55, 59, 64]
 optimizer = FretboardOptimizer(tuning=drop_d)
 
 # Customize cost function
 optimizer.STRING_JUMP_WEIGHT = 2.0  # Prefer same string
 optimizer.STRETCH_THRESHOLD = 3     # Stricter stretch limit
+optimizer.OPEN_STRING_BONUS = -1.0  # Stronger open string preference
 
 # Optimize
-path, tab = optimizer.optimize(melody)
+path = optimizer.optimize(melody)
 ```
 
 ---
@@ -208,7 +311,12 @@ Comprehensive test suite with 30+ tests covering:
 
 Run tests:
 ```bash
+# All tests
 python -m unittest tests.test_fretboard_optimizer -v
+python -m unittest tests.test_dijkstra -v
+
+# Specific test
+python -m unittest tests.test_fretboard_optimizer.TestFretboardOptimizer.test_optimize_simple_scale -v
 ```
 
 ---
@@ -250,29 +358,28 @@ This implementation demonstrates:
 
 ## 🚀 How to Use
 
-### Quick Demo
+### Convert Audio to Tab (Main Feature)
 ```bash
-python demo.py
+# Convert your vocal recording
+python main.py my_melody.mp3
+
+# Advanced options
+python main.py my_melody.mp3 --method basic_pitch --tuning drop-d --preprocess
 ```
 
-### All Examples
+### Examples and Tutorials
 ```bash
-python examples.py
-```
-
-### Interactive Tutorial
-```bash
+# Interactive Jupyter tutorial
 jupyter notebook notebooks/fretboard_optimizer_tutorial.ipynb
+
+# Quick reference and code examples
+python QUICK_REFERENCE.py
 ```
 
-### Tests
+### Testing
 ```bash
 python -m unittest tests.test_fretboard_optimizer -v
-```
-
-### Quick Reference
-```bash
-python QUICK_REFERENCE.py
+python -m unittest tests.test_dijkstra -v
 ```
 
 ---
@@ -303,24 +410,30 @@ python QUICK_REFERENCE.py
 ## 🔮 Future Enhancements
 
 Outlined in README.md:
-- [ ] Audio-to-MIDI integration (Basic Pitch)
+- [x] ~~Audio-to-MIDI integration~~ ✅ **COMPLETED** (Basic Pitch & PYIN)
+- [ ] Real-time audio input processing
 - [ ] Machine learning for personalized fingering
 - [ ] Export to Guitar Pro, MusicXML
 - [ ] Chord support (polyphonic optimization)
 - [ ] Fretting hand visualization
-- [ ] Real-time MIDI input
+- [ ] Web interface for easier access
+- [ ] Mobile app for on-the-go conversion
 
 ---
 
 ## ✨ What Makes This Implementation Special
 
-1. **Complete System**: Not just the algorithm, but full pipeline
-2. **Production Ready**: Proper error handling, edge cases
-3. **Well-Tested**: Comprehensive test suite
-4. **Documented**: 5+ documentation files
-5. **Educational**: Interactive tutorial and examples
-6. **Customizable**: Tunable parameters for different use cases
-7. **Efficient**: Optimized implementation with good performance
-8. **Extensible**: Clean architecture for future enhancements
+1. **End-to-End Pipeline**: Complete audio-to-tab conversion (not just MIDI-to-tab)
+2. **AI-Powered**: Uses state-of-the-art neural network (Basic Pitch) for pitch detection
+3. **Multiple Methods**: Supports both neural network and signal processing approaches
+4. **Production Ready**: Proper error handling, edge cases, progress reporting
+5. **User-Friendly CLI**: Simple command-line interface with sensible defaults
+6. **Well-Tested**: Comprehensive test suite for core algorithms
+7. **Documented**: 5+ documentation files with examples
+8. **Educational**: Interactive tutorial and examples
+9. **Customizable**: Tunable parameters for different playing styles and tunings
+10. **Efficient**: Optimized O(N log N) algorithm with good performance
+11. **Extensible**: Clean modular architecture for future enhancements
+12. **Flexible Output**: ASCII tablature with optional detailed note information
 
 ---
