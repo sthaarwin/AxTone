@@ -35,6 +35,10 @@ class FretPosition:
     def __eq__(self, other):
         return (self.string, self.fret, self.midi_note) == (other.string, other.fret, other.midi_note)
     
+    def __lt__(self, other):
+        """Less than comparison for heap operations."""
+        return (self.string, self.fret, self.midi_note) < (other.string, other.fret, other.midi_note)
+    
     def __repr__(self):
         return f"FretPosition(string={self.string}, fret={self.fret}, midi={self.midi_note})"
 

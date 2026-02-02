@@ -40,9 +40,11 @@ class TablatureFormatter:
             return "No tablature to display."
         
         num_strings = 6
-        tab_lines = [f"{self.string_names[i]}|" for i in range(num_strings)]
-        
         positions_per_line = (self.width - 2) // 4
+        
+        # Build tablature in sections
+        sections = []
+        current_section = [f"{self.string_names[i]}|" for i in range(num_strings)]
         
         for idx, pos in enumerate(path):
             # Convert string index (0=low E) to display index (0=high e)
@@ -50,23 +52,28 @@ class TablatureFormatter:
             
             fret_str = str(pos.fret)
             
-            # Add to appropriate string line
+            # Add to appropriate string line in current section
             for i in range(num_strings):
                 if i == display_string:
-                    tab_lines[i] += f"{fret_str:>2}-"
+                    current_section[i] += f"{fret_str:>2}-"
                 else:
-                    tab_lines[i] += "---"
+                    current_section[i] += "---"
             
             # Line break if needed
             if (idx + 1) % positions_per_line == 0 and idx < len(path) - 1:
+                # Close current section
                 for i in range(num_strings):
-                    tab_lines[i] += "|\n" + f"{self.string_names[i]}|"
+                    current_section[i] += "|"
+                sections.append("\n".join(current_section))
+                # Start new section
+                current_section = [f"{self.string_names[i]}|" for i in range(num_strings)]
         
-        # Close all lines
+        # Close final section
         for i in range(num_strings):
-            tab_lines[i] += "|"
+            current_section[i] += "|"
+        sections.append("\n".join(current_section))
         
-        tablature = "\n".join(tab_lines)
+        tablature = "\n".join(sections)
         
         # Add header
         header = "=" * self.width + "\n"
