@@ -1,194 +1,213 @@
 #!/usr/bin/env python3
 """
-AxTone: Main entry point for the application.
-This script provides a command-line interface for tab generation.
+Vocal-to-Guitar-Tab: Main entry point
+
+Convert audio files (.mp3, .wav) to guitar tablature.
+
+Usage:
+    python main.py input.mp3
+    python main.py input.mp3 --output data/output/tab.txt
+    python main.py input.mp3 --method basic_pitch --tuning drop-d
 """
 
 import argparse
-import logging
 import os
 import sys
-import yaml
 from pathlib import Path
 
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+from src.extractor import AudioExtractor
+from src.optimizer import FretboardOptimizer
+from src.formatter import TablatureFormatter
+from src import utils
 
-# Import core modules
-from src.core.audio_processor import AudioProcessor
-from src.core.tab_generator import TabGenerator
-# Import the new AI pipeline
-from src.core.ai import TabAIPipeline
 
-def setup_arg_parser():
-    """Set up command line argument parser."""
-    parser = argparse.ArgumentParser(
-        description='AxTone - AI-powered guitar tablature generator'
-    )
-    
-    subparsers = parser.add_subparsers(dest='command', help='Command to run')
-    
-    # Process a single file
-    process_parser = subparsers.add_parser('process', help='Process a single audio file')
-    process_parser.add_argument('--input', '-i', required=True, help='Input audio file path')
-    process_parser.add_argument('--output', '-o', help='Output tab file path')
-    process_parser.add_argument('--model', '-m', default='default', help='Model to use')
-    process_parser.add_argument('--ai', action='store_true', help='Use AI pipeline instead of traditional approach')
-    
-    # Process a batch of files
-    batch_parser = subparsers.add_parser('batch', help='Process a directory of audio files')
-    batch_parser.add_argument('--input', '-i', required=True, help='Input directory path')
-    batch_parser.add_argument('--output', '-o', required=True, help='Output directory path')
-    batch_parser.add_argument('--model', '-m', default='default', help='Model to use')
-    batch_parser.add_argument('--ai', action='store_true', help='Use AI pipeline instead of traditional approach')
-    
-    # Train a new model
-    train_parser = subparsers.add_parser('train', help='Train a new model')
-    train_parser.add_argument('--config', '-c', required=True, help='Training configuration file')
-    train_parser.add_argument('--output', '-o', required=True, help='Output directory for the model')
-    
-    return parser
+# Preset tunings
+TUNINGS = {
+    'standard': [40, 45, 50, 55, 59, 64],  # E2-A2-D3-G3-B3-E4
+    'drop-d': [38, 45, 50, 55, 59, 64],    # D2-A2-D3-G3-B3-E4
+    'drop-c': [36, 43, 48, 53, 57, 62],    # C2-G2-C3-F3-A3-D4
+    'open-g': [38, 43, 50, 55, 59, 62],    # D2-G2-D3-G3-B3-D4
+    'dadgad': [38, 45, 50, 55, 45, 50],    # D2-A2-D3-G3-A3-D4
+}
 
-def load_config(model_name='default'):
-    """Load configuration from file."""
-    config_path = os.path.join('configs', f'{model_name}_config.yaml')
-    
-    try:
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f)
-        logger.info(f"Loaded configuration from {config_path}")
-        return config
-    except Exception as e:
-        logger.error(f"Error loading configuration: {e}")
-        logger.info("Using default configuration")
-        return {
-            'audio': {
-                'sample_rate': 44100,
-                'hop_length': 512
-            },
-            'tab': {
-                'instruments': [
-                    {
-                        'name': 'guitar',
-                        'strings': 6,
-                        'tuning': ['E2', 'A2', 'D3', 'G3', 'B3', 'E4']
-                    }
-                ]
-            },
-            'paths': {
-                'raw_data': 'data/raw/',
-                'processed_stems': 'data/processed/stems/',
-                'features': 'data/processed/features/',
-                'midi_output': 'data/processed/midi/',
-                'tab_output': 'data/outputs/'
-            }
-        }
-
-def process_file(input_path, output_path, model_name, use_ai=False):
-    """Process a single audio file and generate tab."""
-    config = load_config(model_name)
-    
-    if use_ai:
-        # Use the AI pipeline
-        pipeline = TabAIPipeline(config)
-        return pipeline.process_file(input_path, output_path)
-    else:
-        # Use the traditional approach
-        audio_processor = AudioProcessor(config)
-        tab_generator = TabGenerator(config)
-        
-        # Process the audio
-        features = audio_processor.process_file(input_path)
-        
-        # Generate the tab
-        tab = tab_generator.generate_tab(features)
-        
-        # Export the tab
-        if output_path is None:
-            filename = os.path.basename(input_path)
-            output_path = os.path.join(
-                config['paths']['tab_output'],
-                f"{os.path.splitext(filename)[0]}.tab"
-            )
-        
-        tab_generator.export_tab(tab, format='txt', output_path=output_path)
-        logger.info(f"Tab exported to {output_path}")
-        return output_path
-
-def process_batch(input_dir, output_dir, model_name, use_ai=False):
-    """Process all audio files in a directory."""
-    config = load_config(model_name)
-    
-    if use_ai:
-        # Use the AI pipeline
-        pipeline = TabAIPipeline(config)
-        return pipeline.process_batch(input_dir, output_dir)
-    else:
-        # Use the traditional approach
-        audio_processor = AudioProcessor(config)
-        tab_generator = TabGenerator(config)
-        
-        output_files = []
-        
-        for filename in os.listdir(input_dir):
-            if filename.endswith(('.wav', '.mp3', '.ogg')):
-                input_path = os.path.join(input_dir, filename)
-                output_path = os.path.join(
-                    output_dir, 
-                    f"{os.path.splitext(filename)[0]}.tab"
-                )
-                
-                try:
-                    # Process the audio
-                    features = audio_processor.process_file(input_path)
-                    
-                    # Generate the tab
-                    tab = tab_generator.generate_tab(features)
-                    
-                    # Export the tab
-                    tab_generator.export_tab(tab, format='txt', output_path=output_path)
-                    logger.info(f"Tab exported to {output_path}")
-                    output_files.append(output_path)
-                except Exception as e:
-                    logger.error(f"Error processing {input_path}: {e}")
-        
-        return output_files
-
-def train_model(config_path, output_dir):
-    """Train a new model using the provided configuration."""
-    try:
-        with open(config_path, 'r') as f:
-            training_config = yaml.safe_load(f)
-        
-        # This would be implemented with actual training code
-        logger.info(f"Training new model with config {config_path}")
-        logger.info(f"Model will be saved to {output_dir}")
-        
-        # Placeholder for actual training code
-        logger.warning("Model training not yet implemented")
-        
-        return None
-    except Exception as e:
-        logger.error(f"Error training model: {e}")
-        return None
 
 def main():
-    """Main entry point for the application."""
-    parser = setup_arg_parser()
+    parser = argparse.ArgumentParser(
+        description='Convert vocal melodies to guitar tablature',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python main.py vocals.mp3
+  python main.py vocals.mp3 --output my_tab.txt
+  python main.py vocals.mp3 --method basic_pitch
+  python main.py vocals.mp3 --tuning drop-d
+  python main.py vocals.mp3 --detailed
+        """
+    )
+    
+    parser.add_argument('input', help='Input audio file (.mp3, .wav, etc.)')
+    parser.add_argument('-o', '--output', help='Output tablature file (default: auto-generated)')
+    parser.add_argument('-m', '--method', choices=['basic_pitch', 'pyin'], 
+                       default='pyin', help='Pitch detection method (default: pyin)')
+    parser.add_argument('-t', '--tuning', default='standard',
+                       help='Guitar tuning (standard, drop-d, drop-c, open-g, dadgad)')
+    parser.add_argument('--save-midi', action='store_true',
+                       help='Save extracted MIDI file')
+    parser.add_argument('--detailed', action='store_true',
+                       help='Include detailed note information in output')
+    parser.add_argument('--min-duration', type=float, default=0.1,
+                       help='Minimum note duration in seconds (default: 0.1)')
+    parser.add_argument('--preprocess', action='store_true',
+                       help='Preprocess audio (normalize and trim)')
+    
     args = parser.parse_args()
     
-    if args.command == 'process':
-        process_file(args.input, args.output, args.model, args.ai)
-    elif args.command == 'batch':
-        process_batch(args.input, args.output, args.model, args.ai)
-    elif args.command == 'train':
-        train_model(args.config, args.output)
+    # Validate input file
+    if not os.path.exists(args.input):
+        print(f"Error: Input file not found: {args.input}")
+        sys.exit(1)
+    
+    print("=" * 80)
+    print("VOCAL-TO-GUITAR-TAB CONVERTER")
+    print("=" * 80)
+    print(f"Input: {args.input}")
+    print(f"Method: {args.method}")
+    print(f"Tuning: {args.tuning}")
+    print("=" * 80)
+    print()
+    
+    # Setup paths
+    input_path = Path(args.input)
+    base_name = input_path.stem
+    
+    if args.output:
+        output_path = args.output
     else:
-        parser.print_help()
+        output_dir = Path("data/output")
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = output_dir / f"{base_name}_tab.txt"
+    
+    # Preprocess audio if requested
+    audio_path = args.input
+    if args.preprocess:
+        print("Step 1: Preprocessing audio...")
+        processed_dir = Path("data/processed")
+        processed_dir.mkdir(parents=True, exist_ok=True)
+        processed_path = processed_dir / f"{base_name}_processed.wav"
+        
+        utils.preprocess_audio(
+            args.input,
+            output_path=str(processed_path),
+            normalize=True,
+            trim=True
+        )
+        audio_path = str(processed_path)
+        print()
+    
+    # Step 1: Extract MIDI from audio
+    print(f"Step {'2' if args.preprocess else '1'}: Extracting MIDI notes from audio...")
+    extractor = AudioExtractor(method=args.method, min_note_duration=args.min_duration)
+    
+    try:
+        midi_notes = extractor.extract(audio_path)
+    except Exception as e:
+        print(f"Error during MIDI extraction: {e}")
+        sys.exit(1)
+    
+    if not midi_notes:
+        print("Error: No notes detected in audio file")
+        print("Try:")
+        print("  - Using a clearer recording")
+        print("  - Adjusting --min-duration parameter")
+        print("  - Using --method basic_pitch for better accuracy")
+        sys.exit(1)
+    
+    print(f"✓ Extracted {len(midi_notes)} notes")
+    
+    # Show pitch range
+    midi_nums = [n.midi_number for n in midi_notes]
+    from src.extractor import midi_number_to_note_name
+    print(f"  Pitch range: {midi_number_to_note_name(min(midi_nums))} to {midi_number_to_note_name(max(midi_nums))}")
+    print()
+    
+    # Save MIDI if requested
+    if args.save_midi:
+        midi_output = Path("data/output") / f"{base_name}.mid"
+        midi_output.parent.mkdir(parents=True, exist_ok=True)
+        extractor.save_midi(midi_notes, str(midi_output))
+        print()
+    
+    # Step 2: Optimize fingering
+    print(f"Step {'3' if args.preprocess else '2'}: Optimizing guitar fingering...")
+    
+    # Get tuning
+    if args.tuning in TUNINGS:
+        tuning = TUNINGS[args.tuning]
+    else:
+        try:
+            # Try parsing as comma-separated MIDI numbers
+            tuning = [int(x) for x in args.tuning.split(',')]
+            if len(tuning) != 6:
+                print(f"Error: Custom tuning must have 6 strings")
+                sys.exit(1)
+        except:
+            print(f"Error: Unknown tuning '{args.tuning}'")
+            print(f"Available: {', '.join(TUNINGS.keys())}")
+            print(f"Or provide custom as comma-separated MIDI numbers")
+            sys.exit(1)
+    
+    optimizer = FretboardOptimizer(tuning=tuning)
+    
+    try:
+        path = optimizer.optimize(midi_notes)
+    except Exception as e:
+        print(f"Error during optimization: {e}")
+        sys.exit(1)
+    
+    if not path:
+        print("Error: Could not find valid fingering path")
+        print("This might mean:")
+        print("  - Notes are outside guitar range")
+        print("  - Tuning doesn't support these notes")
+        sys.exit(1)
+    
+    print()
+    
+    # Step 3: Format and save tablature
+    print(f"Step {'4' if args.preprocess else '3'}: Generating tablature...")
+    formatter = TablatureFormatter()
+    
+    formatter.save(
+        path,
+        output_path,
+        midi_sequence=midi_notes,
+        detailed=args.detailed
+    )
+    
+    print()
+    print("=" * 80)
+    print("CONVERSION COMPLETE!")
+    print("=" * 80)
+    print(f"Tablature saved to: {output_path}")
+    
+    if args.save_midi:
+        print(f"MIDI saved to: {midi_output}")
+    
+    print()
+    print("Preview:")
+    print("-" * 80)
+    
+    # Print preview (first 10 notes)
+    preview_path = path[:min(10, len(path))]
+    preview_notes = midi_notes[:min(10, len(midi_notes))]
+    print(formatter.format(preview_path, preview_notes))
+    
+    if len(path) > 10:
+        print(f"\n... ({len(path) - 10} more notes in full file)")
+    
+    print()
+    return 0
 
-if __name__ == '__main__':
-    main()
+
+if __name__ == "__main__":
+    sys.exit(main())
