@@ -19,8 +19,7 @@ const TUNINGS = [
 ]
 
 const METHODS = [
-  { value: 'pyin', label: 'PYIN (Fast)', description: 'Signal processing based' },
-  { value: 'basic_pitch', label: 'Basic Pitch (Accurate)', description: 'AI neural network' },
+  { value: 'pyin', label: 'PYIN', description: 'Fast & accurate signal processing' },
 ]
 
 export default function SettingsPanel({ 

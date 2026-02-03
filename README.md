@@ -1,19 +1,19 @@
 # AxTone 🎸
 
-An AI-powered system for converting audio melodies into optimized guitar tablature using advanced pitch detection and graph algorithms.
+A system for converting audio melodies into optimized guitar tablature using advanced pitch detection and graph algorithms.
 
 ## Overview
 
 AxTone is a complete vocal-to-guitar-tab converter that extracts MIDI notes from audio files and generates optimized, playable guitar tablature using **Dijkstra's Algorithm**. The system:
 
-1. **Extracts pitch** from audio files (MP3, WAV) using AI-powered pitch detection (Basic Pitch or PYIN)
+1. **Extracts pitch** from audio files (MP3, WAV) using PYIN pitch detection
 2. **Optimizes fingering** by treating the guitar fretboard as a graph where each possible finger position is a node, and transitions between positions have costs based on playability
 3. **Generates tablature** in readable ASCII format with performance statistics
+4. **Web interface** with interactive fretboard and audio playback
 
 ## Features
 
-- � **Audio-to-MIDI Conversion**: Extract melodies from audio files (MP3, WAV) using AI-powered pitch detection
-- 🧠 **Multiple Pitch Detection Methods**: Basic Pitch (neural network) or PYIN (signal processing)
+- 🎵 **Audio-to-MIDI Conversion**: Extract melodies from audio files (MP3, WAV) using PYIN pitch detection
 - 🎯 **Graph-Based Optimization**: Uses Dijkstra's algorithm to find the easiest fingering path
 - 🎵 **Intelligent Cost Function**: Considers fret distance, string jumps, stretch penalties, and open string preferences
 - 🎸 **Multiple Tuning Support**: Works with standard tuning and custom tunings (Drop-D, Drop-C, Open-G, DADGAD)
@@ -21,6 +21,7 @@ AxTone is a complete vocal-to-guitar-tab converter that extracts MIDI notes from
 - 🔧 **Customizable Parameters**: Adjust cost weights, minimum note duration, and preprocessing options
 - 📈 **Performance Statistics**: Shows average fret movement and string jumps
 - 💾 **MIDI Export**: Optionally save extracted MIDI files for further editing
+- 🌐 **Web Interface**: Modern Next.js frontend with drag-and-drop file upload and interactive fretboard
 
 ## Installation
 
@@ -45,9 +46,6 @@ python main.py vocals.mp3
 
 # Specify output file
 python main.py vocals.mp3 --output my_tab.txt
-
-# Use Basic Pitch for better accuracy
-python main.py vocals.mp3 --method basic_pitch
 
 # Use Drop-D tuning
 python main.py vocals.mp3 --tuning drop-d

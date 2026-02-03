@@ -119,7 +119,7 @@ async def convert_audio_to_tab(
     
     Parameters:
     - file: Audio file (.mp3, .wav, .flac, .ogg, .m4a)
-    - method: Pitch detection method ('basic_pitch' or 'pyin')
+    - method: Pitch detection method (only 'pyin' supported)
     - tuning: Guitar tuning preset (standard, drop-d, drop-c, open-g, dadgad)
     - min_duration: Minimum note duration in seconds (default: 0.1)
     - detailed: Include detailed note information (default: False)
@@ -127,6 +127,8 @@ async def convert_audio_to_tab(
     
     Returns:
     - JSON with tablature, statistics, and optional detailed note info
+    
+    Note: Basic Pitch removed to reduce server memory usage on free tier.
     """
     
     # Validate file type
@@ -137,11 +139,11 @@ async def convert_audio_to_tab(
             detail=f"Unsupported file format. Allowed: {', '.join(allowed_extensions)}"
         )
     
-    # Validate method
-    if method not in ['basic_pitch', 'pyin']:
+    # Only PYIN method supported (Basic Pitch removed to reduce memory usage)
+    if method != 'pyin':
         raise HTTPException(
             status_code=400,
-            detail="Invalid method. Must be 'basic_pitch' or 'pyin'"
+            detail="Only 'pyin' method is supported. Basic Pitch removed to reduce server memory usage."
         )
     
     tmp_path = None

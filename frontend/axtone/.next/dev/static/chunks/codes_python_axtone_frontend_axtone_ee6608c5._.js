@@ -1232,13 +1232,8 @@ const TUNINGS = [
 const METHODS = [
     {
         value: 'pyin',
-        label: 'PYIN (Fast)',
-        description: 'Signal processing based'
-    },
-    {
-        value: 'basic_pitch',
-        label: 'Basic Pitch (Accurate)',
-        description: 'AI neural network'
+        label: 'PYIN',
+        description: 'Fast & accurate signal processing'
     }
 ];
 function SettingsPanel({ tuning, method, onTuningChange, onMethodChange }) {
@@ -1252,14 +1247,14 @@ function SettingsPanel({ tuning, method, onTuningChange, onMethodChange }) {
                         className: "w-4 h-4 text-cyan-400"
                     }, void 0, false, {
                         fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                        lineNumber: 35,
+                        lineNumber: 34,
                         columnNumber: 9
                     }, this),
                     "Conversion Settings"
                 ]
             }, void 0, true, {
                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                lineNumber: 34,
+                lineNumber: 33,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1273,7 +1268,7 @@ function SettingsPanel({ tuning, method, onTuningChange, onMethodChange }) {
                                 children: "Guitar Tuning"
                             }, void 0, false, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                                lineNumber: 42,
+                                lineNumber: 41,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("select", {
@@ -1285,18 +1280,18 @@ function SettingsPanel({ tuning, method, onTuningChange, onMethodChange }) {
                                         children: t.label
                                     }, t.value, false, {
                                         fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                                        lineNumber: 49,
+                                        lineNumber: 48,
                                         columnNumber: 15
                                     }, this))
                             }, void 0, false, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                                lineNumber: 43,
+                                lineNumber: 42,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                        lineNumber: 41,
+                        lineNumber: 40,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1307,7 +1302,7 @@ function SettingsPanel({ tuning, method, onTuningChange, onMethodChange }) {
                                 children: "Detection Method"
                             }, void 0, false, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                                lineNumber: 58,
+                                lineNumber: 57,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1324,7 +1319,7 @@ function SettingsPanel({ tuning, method, onTuningChange, onMethodChange }) {
                                                 className: "mt-1 mr-3 accent-cyan-500"
                                             }, void 0, false, {
                                                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                                                lineNumber: 69,
+                                                lineNumber: 68,
                                                 columnNumber: 17
                                             }, this),
                                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1335,7 +1330,7 @@ function SettingsPanel({ tuning, method, onTuningChange, onMethodChange }) {
                                                         children: m.label
                                                     }, void 0, false, {
                                                         fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                                                        lineNumber: 78,
+                                                        lineNumber: 77,
                                                         columnNumber: 19
                                                     }, this),
                                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1343,30 +1338,30 @@ function SettingsPanel({ tuning, method, onTuningChange, onMethodChange }) {
                                                         children: m.description
                                                     }, void 0, false, {
                                                         fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                                                        lineNumber: 79,
+                                                        lineNumber: 78,
                                                         columnNumber: 19
                                                     }, this)
                                                 ]
                                             }, void 0, true, {
                                                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                                                lineNumber: 77,
+                                                lineNumber: 76,
                                                 columnNumber: 17
                                             }, this)
                                         ]
                                     }, m.value, true, {
                                         fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                                        lineNumber: 61,
+                                        lineNumber: 60,
                                         columnNumber: 15
                                     }, this))
                             }, void 0, false, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                                lineNumber: 59,
+                                lineNumber: 58,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                        lineNumber: 57,
+                        lineNumber: 56,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1378,31 +1373,31 @@ function SettingsPanel({ tuning, method, onTuningChange, onMethodChange }) {
                                     className: "w-3 h-3 inline mr-1"
                                 }, void 0, false, {
                                     fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                                    lineNumber: 89,
+                                    lineNumber: 88,
                                     columnNumber: 13
                                 }, this),
                                 "Settings apply to the next conversion"
                             ]
                         }, void 0, true, {
                             fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                            lineNumber: 88,
+                            lineNumber: 87,
                             columnNumber: 11
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                        lineNumber: 87,
+                        lineNumber: 86,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-                lineNumber: 39,
+                lineNumber: 38,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/codes/python/axtone/frontend/axtone/components/settings-panel.tsx",
-        lineNumber: 33,
+        lineNumber: 32,
         columnNumber: 5
     }, this);
 }
