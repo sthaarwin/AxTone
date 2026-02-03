@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://localhost:8000';
+const PYTHON_API_URL = process.env.PYTHON_API_URL;
+
+if (!PYTHON_API_URL) {
+  throw new Error('PYTHON_API_URL environment variable is not set');
+}
 
 export async function POST(request: NextRequest) {
   try {

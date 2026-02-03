@@ -52,7 +52,10 @@ __turbopack_context__.s([
 ]);
 var __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/codes/python/axtone/frontend/axtone/node_modules/next/server.js [app-route] (ecmascript)");
 ;
-const PYTHON_API_URL = process.env.PYTHON_API_URL || 'http://localhost:8000';
+const PYTHON_API_URL = process.env.PYTHON_API_URL;
+if (!PYTHON_API_URL) {
+    throw new Error('PYTHON_API_URL environment variable is not set');
+}
 async function POST(request) {
     try {
         const formData = await request.formData();
