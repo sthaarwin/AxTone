@@ -57,7 +57,6 @@ async function POST(request) {
         const PYTHON_API_URL = process.env.PYTHON_API_URL || ("TURBOPACK compile-time value", "https://axtone.onrender.com");
         if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
         ;
-        console.log('Connecting to:', PYTHON_API_URL);
         // Forward the request to the Python FastAPI backend with extended timeout
         const controller = new AbortController();
         const timeoutId = setTimeout(()=>controller.abort(), 180000); // 3 minute timeout for server wake-up
@@ -68,31 +67,15 @@ async function POST(request) {
                 signal: controller.signal
             });
             clearTimeout(timeoutId);
-            console.log('✅ Response received:', response.status);
-            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
             if (!response.ok) {
-                const contentType = response.headers.get('content-type');
-                console.error('Error response content-type:', contentType);
-                if (contentType?.includes('application/json')) {
-                    const error = await response.json();
-                    console.error('Backend error:', error);
-                    return __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
-                        error: error.detail || 'Conversion failed'
-                    }, {
-                        status: response.status
-                    });
-                } else {
-                    const errorText = await response.text();
-                    console.error('Backend error (non-JSON):', errorText);
-                    return __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
-                        error: `Server error: ${errorText}`
-                    }, {
-                        status: response.status
-                    });
-                }
+                const error = await response.json();
+                return __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
+                    error: error.detail || 'Conversion failed'
+                }, {
+                    status: response.status
+                });
             }
             const data = await response.json();
-            console.log('✅ Conversion successful');
             return __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json(data);
         } catch (fetchError) {
             clearTimeout(timeoutId);
@@ -102,7 +85,6 @@ async function POST(request) {
             throw new Error(`Cannot connect to server: ${fetchError instanceof Error ? fetchError.message : 'Network error'}`);
         }
     } catch (error) {
-        console.error('API route error:', error);
         return __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
             error: error instanceof Error ? error.message : 'Failed to connect to processing server'
         }, {

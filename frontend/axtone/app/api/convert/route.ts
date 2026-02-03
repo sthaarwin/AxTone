@@ -10,8 +10,6 @@ export async function POST(request: NextRequest) {
     if (!PYTHON_API_URL) {
       throw new Error('API URL not configured');
     }
-
-    console.log('Connecting to:', PYTHON_API_URL);
     
     // Forward the request to the Python FastAPI backend with extended timeout
     const controller = new AbortController();
@@ -25,32 +23,16 @@ export async function POST(request: NextRequest) {
       });
 
       clearTimeout(timeoutId);
-      console.log('✅ Response received:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
-        const contentType = response.headers.get('content-type');
-        console.error('Error response content-type:', contentType);
-        
-        if (contentType?.includes('application/json')) {
-          const error = await response.json();
-          console.error('Backend error:', error);
-          return NextResponse.json(
-            { error: error.detail || 'Conversion failed' },
-            { status: response.status }
-          );
-        } else {
-          const errorText = await response.text();
-          console.error('Backend error (non-JSON):', errorText);
-          return NextResponse.json(
-            { error: `Server error: ${errorText}` },
-            { status: response.status }
-          );
-        }
+        const error = await response.json();
+        return NextResponse.json(
+          { error: error.detail || 'Conversion failed' },
+          { status: response.status }
+        );
       }
 
       const data = await response.json();
-      console.log('✅ Conversion successful');
       return NextResponse.json(data);
       
     } catch (fetchError) {
@@ -64,7 +46,6 @@ export async function POST(request: NextRequest) {
     }
     
   } catch (error) {
-    console.error('API route error:', error);
     return NextResponse.json(
       { 
         error: error instanceof Error ? error.message : 'Failed to connect to processing server' 
