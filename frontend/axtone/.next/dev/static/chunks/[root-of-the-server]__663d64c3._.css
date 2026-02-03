@@ -1265,6 +1265,10 @@
     color: var(--color-slate-500);
   }
 
+  .text-slate-600 {
+    color: var(--color-slate-600);
+  }
+
   .text-transparent {
     color: #0000;
   }

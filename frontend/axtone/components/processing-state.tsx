@@ -76,9 +76,12 @@ export default function ProcessingState({ fileName }: ProcessingStateProps) {
       </div>
 
       {/* Progress Info */}
-      <div className="text-center">
+      <div className="text-center space-y-2">
         <p className="text-slate-500 text-sm">
-          Analyzing audio and building optimal fretboard path...
+          This may take 15-30 seconds for processing
+        </p>
+        <p className="text-slate-600 text-xs">
+          First request may take up to 2 minutes (server wake-up on free tier)
         </p>
       </div>
     </div>
