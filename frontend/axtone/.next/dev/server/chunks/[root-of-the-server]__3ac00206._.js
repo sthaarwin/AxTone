@@ -69,14 +69,27 @@ async function POST(request) {
             });
             clearTimeout(timeoutId);
             console.log('✅ Response received:', response.status);
+            console.log('Response headers:', Object.fromEntries(response.headers.entries()));
             if (!response.ok) {
-                const error = await response.json();
-                console.error('Backend error:', error);
-                return __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
-                    error: error.detail || 'Conversion failed'
-                }, {
-                    status: response.status
-                });
+                const contentType = response.headers.get('content-type');
+                console.error('Error response content-type:', contentType);
+                if (contentType?.includes('application/json')) {
+                    const error = await response.json();
+                    console.error('Backend error:', error);
+                    return __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
+                        error: error.detail || 'Conversion failed'
+                    }, {
+                        status: response.status
+                    });
+                } else {
+                    const errorText = await response.text();
+                    console.error('Backend error (non-JSON):', errorText);
+                    return __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$server$2e$js__$5b$app$2d$route$5d$__$28$ecmascript$29$__["NextResponse"].json({
+                        error: `Server error: ${errorText}`
+                    }, {
+                        status: response.status
+                    });
+                }
             }
             const data = await response.json();
             console.log('✅ Conversion successful');
