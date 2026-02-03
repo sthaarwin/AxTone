@@ -26,14 +26,27 @@ export async function POST(request: NextRequest) {
 
       clearTimeout(timeoutId);
       console.log('✅ Response received:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
-        const error = await response.json();
-        console.error('Backend error:', error);
-        return NextResponse.json(
-          { error: error.detail || 'Conversion failed' },
-          { status: response.status }
-        );
+        const contentType = response.headers.get('content-type');
+        console.error('Error response content-type:', contentType);
+        
+        if (contentType?.includes('application/json')) {
+          const error = await response.json();
+          console.error('Backend error:', error);
+          return NextResponse.json(
+            { error: error.detail || 'Conversion failed' },
+            { status: response.status }
+          );
+        } else {
+          const errorText = await response.text();
+          console.error('Backend error (non-JSON):', errorText);
+          return NextResponse.json(
+            { error: `Server error: ${errorText}` },
+            { status: response.status }
+          );
+        }
       }
 
       const data = await response.json();
