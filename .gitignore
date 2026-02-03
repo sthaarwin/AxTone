@@ -128,7 +128,6 @@ node_modules/
 *.backup
 *.orig
 
-.python-version
 
 
 #frontend
