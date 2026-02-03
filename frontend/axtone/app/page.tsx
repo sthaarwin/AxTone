@@ -1,34 +1,98 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import FileUploader from '@/components/file-uploader'
 import ProcessingState from '@/components/processing-state'
 import ResultView from '@/components/result-view'
 import InteractiveFretboard from '@/components/interactive-fretboard'
+import SettingsPanel from '@/components/settings-panel'
 import { Button } from '@/components/ui/button'
 import { Music } from 'lucide-react'
 
-type AppState = 'idle' | 'processing' | 'result'
+type AppState = 'idle' | 'processing' | 'result' | 'error'
+
+interface ConversionResult {
+  tablature: string
+  midi_base64?: string
+  stats: {
+    total_notes: number
+    pitch_range: {
+      min: string
+      max: string
+    }
+    avg_fret_movement: number
+    avg_string_jumps: number
+    tuning_used: string
+  }
+}
 
 export default function Home() {
   const [state, setState] = useState<AppState>('idle')
   const [fileName, setFileName] = useState('')
   const [isPlaying, setIsPlaying] = useState(false)
+  const [result, setResult] = useState<ConversionResult | null>(null)
+  const [error, setError] = useState<string>('')
+  const [tuning, setTuning] = useState('standard')
+  const [method, setMethod] = useState('pyin')
+  
+  // Ref for scrolling to fretboard
+  const fretboardRef = useRef<HTMLDivElement>(null)
 
-  const handleFileUpload = (file: File) => {
+  const handleFileUpload = async (file: File) => {
     setFileName(file.name)
     setState('processing')
+    setError('')
     
-    // Simulate processing time
-    setTimeout(() => {
+    try {
+      // Create FormData
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('method', method)
+      formData.append('tuning', tuning)
+      formData.append('min_duration', '0.1')
+      formData.append('detailed', 'false')
+      formData.append('preprocess', 'false')
+      
+      // Call the Next.js API route (which forwards to Python)
+      const response = await fetch('/api/convert', {
+        method: 'POST',
+        body: formData,
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to convert audio')
+      }
+      
+      const data = await response.json()
+      setResult(data)
       setState('result')
-    }, 3500)
+      
+    } catch (err) {
+      console.error('Conversion error:', err)
+      setError(err instanceof Error ? err.message : 'An error occurred during conversion')
+      setState('error')
+    }
+  }
+
+  const handlePlayToggle = (playing: boolean) => {
+    setIsPlaying(playing)
+    
+    // When play is pressed, scroll to fretboard
+    if (playing && fretboardRef.current) {
+      fretboardRef.current.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      })
+    }
   }
 
   const handleReset = () => {
     setState('idle')
     setFileName('')
     setIsPlaying(false)
+    setResult(null)
+    setError('')
   }
 
   return (
@@ -72,8 +136,20 @@ export default function Home() {
               </p>
             </div>
 
-            {/* File Uploader */}
-            <FileUploader onFileSelect={handleFileUpload} />
+            {/* Settings and Upload */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <FileUploader onFileSelect={handleFileUpload} />
+              </div>
+              <div>
+                <SettingsPanel 
+                  tuning={tuning}
+                  method={method}
+                  onTuningChange={setTuning}
+                  onMethodChange={setMethod}
+                />
+              </div>
+            </div>
           </div>
         )}
 
@@ -81,14 +157,32 @@ export default function Home() {
           <ProcessingState fileName={fileName} />
         )}
 
-        {state === 'result' && (
+        {state === 'error' && (
+          <div className="max-w-2xl mx-auto">
+            <div className="rounded-xl border border-red-800 bg-red-900/20 p-6 backdrop-blur-sm">
+              <h3 className="text-xl font-bold text-red-400 mb-2">Conversion Failed</h3>
+              <p className="text-red-300 mb-4">{error}</p>
+              <Button 
+                onClick={handleReset}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Try Again
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {state === 'result' && result && (
           <>
             <ResultView 
               fileName={fileName}
               isPlaying={isPlaying}
-              onPlayingChange={setIsPlaying}
+              onPlayingChange={handlePlayToggle}
+              tablature={result.tablature}
+              stats={result.stats}
+              midiBase64={result.midi_base64}
             />
-            <div className="mt-12">
+            <div ref={fretboardRef} className="mt-12">
               <InteractiveFretboard isPlaying={isPlaying} />
             </div>
           </>

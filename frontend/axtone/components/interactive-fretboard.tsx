@@ -103,7 +103,7 @@ export default function InteractiveFretboard({ isPlaying }: InteractiveFretboard
       const index = Math.floor(time * 2) % notePattern.length
       setHighlightedFret(notePattern[index])
     }
-  }, [isPlaying, highlightedFret])
+  }, [isPlaying])
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 backdrop-blur-sm">

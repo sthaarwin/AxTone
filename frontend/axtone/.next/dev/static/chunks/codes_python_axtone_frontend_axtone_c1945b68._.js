@@ -467,85 +467,6 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
     __turbopack_context__.k.registerExports(__turbopack_context__.m, globalThis.$RefreshHelpers$);
 }
 }),
-"[project]/codes/python/axtone/frontend/axtone/components/waveform-visualizer.tsx [app-client] (ecmascript)", ((__turbopack_context__) => {
-"use strict";
-
-__turbopack_context__.s([
-    "default",
-    ()=>WaveformVisualizer
-]);
-var __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/codes/python/axtone/frontend/axtone/node_modules/next/dist/compiled/react/jsx-dev-runtime.js [app-client] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/codes/python/axtone/frontend/axtone/node_modules/next/dist/compiled/react/index.js [app-client] (ecmascript)");
-;
-var _s = __turbopack_context__.k.signature();
-'use client';
-;
-function WaveformVisualizer({ isPlaying }) {
-    _s();
-    const canvasRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
-    (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
-        "WaveformVisualizer.useEffect": ()=>{
-            const canvas = canvasRef.current;
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return;
-            const width = canvas.width;
-            const height = canvas.height;
-            // Clear canvas
-            ctx.fillStyle = '#0f172a';
-            ctx.fillRect(0, 0, width, height);
-            // Draw waveform bars
-            const barCount = 60;
-            const barWidth = width / barCount;
-            const gap = 2;
-            for(let i = 0; i < barCount; i++){
-                // Generate random bar heights with variation
-                const randomness = Math.sin(i * 0.3 + Date.now() / 1000) * 0.3 + 0.7;
-                const baseHeight = (Math.sin(i / 10) * 0.5 + 0.5) * randomness;
-                let barHeight = baseHeight * (height - 20);
-                // Animated playback effect
-                if (isPlaying) {
-                    barHeight *= 0.5 + Math.sin(Date.now() / 100 - i * 0.1) * 0.5;
-                }
-                const x = i * barWidth + gap / 2;
-                const y = (height - barHeight) / 2;
-                // Gradient color
-                const gradient = ctx.createLinearGradient(x, y, x, y + barHeight);
-                gradient.addColorStop(0, '#22d3ee');
-                gradient.addColorStop(1, '#0ea5e9');
-                ctx.fillStyle = gradient;
-                ctx.fillRect(x, y, barWidth - gap, barHeight);
-            }
-            // Draw center line
-            ctx.strokeStyle = 'rgba(15, 23, 42, 0.5)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(0, height / 2);
-            ctx.lineTo(width, height / 2);
-            ctx.stroke();
-        }
-    }["WaveformVisualizer.useEffect"], [
-        isPlaying
-    ]);
-    return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("canvas", {
-        ref: canvasRef,
-        width: 400,
-        height: 150,
-        className: "w-full rounded-lg bg-slate-950 border border-slate-800"
-    }, void 0, false, {
-        fileName: "[project]/codes/python/axtone/frontend/axtone/components/waveform-visualizer.tsx",
-        lineNumber: 65,
-        columnNumber: 5
-    }, this);
-}
-_s(WaveformVisualizer, "UJgi7ynoup7eqypjnwyX/s32POg=");
-_c = WaveformVisualizer;
-var _c;
-__turbopack_context__.k.register(_c, "WaveformVisualizer");
-if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelpers !== null) {
-    __turbopack_context__.k.registerExports(__turbopack_context__.m, globalThis.$RefreshHelpers$);
-}
-}),
 "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx [app-client] (ecmascript)", ((__turbopack_context__) => {
 "use strict";
 
@@ -561,11 +482,9 @@ var __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f
 var __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$file$2d$down$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__FileDown$3e$__ = __turbopack_context__.i("[project]/codes/python/axtone/frontend/axtone/node_modules/lucide-react/dist/esm/icons/file-down.js [app-client] (ecmascript) <export default as FileDown>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$lucide$2d$react$2f$dist$2f$esm$2f$icons$2f$music$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__$3c$export__default__as__Music$3e$__ = __turbopack_context__.i("[project]/codes/python/axtone/frontend/axtone/node_modules/lucide-react/dist/esm/icons/music.js [app-client] (ecmascript) <export default as Music>");
 var __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/codes/python/axtone/frontend/axtone/components/ui/button.tsx [app-client] (ecmascript)");
-var __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$components$2f$waveform$2d$visualizer$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__ = __turbopack_context__.i("[project]/codes/python/axtone/frontend/axtone/components/waveform-visualizer.tsx [app-client] (ecmascript)");
 ;
 var _s = __turbopack_context__.k.signature();
 'use client';
-;
 ;
 ;
 ;
@@ -699,16 +618,122 @@ function ResultView({ fileName, isPlaying, onPlayingChange, tablature, stats }) 
                                         lineNumber: 92,
                                         columnNumber: 13
                                     }, this),
-                                    "Waveform"
+                                    "Statistics"
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
                                 lineNumber: 91,
                                 columnNumber: 11
                             }, this),
-                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$components$2f$waveform$2d$visualizer$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
-                                isPlaying: isPlaying
-                            }, void 0, false, {
+                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                className: "space-y-3",
+                                children: [
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "flex justify-between items-center",
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                className: "text-slate-400 text-sm",
+                                                children: "Total Notes"
+                                            }, void 0, false, {
+                                                fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
+                                                lineNumber: 97,
+                                                columnNumber: 15
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                className: "text-white font-semibold",
+                                                children: stats.total_notes
+                                            }, void 0, false, {
+                                                fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
+                                                lineNumber: 98,
+                                                columnNumber: 15
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
+                                        lineNumber: 96,
+                                        columnNumber: 13
+                                    }, this),
+                                    /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "flex justify-between items-center",
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                className: "text-slate-400 text-sm",
+                                                children: "Pitch Range"
+                                            }, void 0, false, {
+                                                fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
+                                                lineNumber: 101,
+                                                columnNumber: 15
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                className: "text-white font-semibold",
+                                                children: [
+                                                    stats.pitch_range.min,
+                                                    " - ",
+                                                    stats.pitch_range.max
+                                                ]
+                                            }, void 0, true, {
+                                                fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
+                                                lineNumber: 102,
+                                                columnNumber: 15
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
+                                        lineNumber: 100,
+                                        columnNumber: 13
+                                    }, this),
+                                    stats.avg_fret_movement !== undefined && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "flex justify-between items-center",
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                className: "text-slate-400 text-sm",
+                                                children: "Avg Fret Movement"
+                                            }, void 0, false, {
+                                                fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
+                                                lineNumber: 108,
+                                                columnNumber: 17
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                className: "text-white font-semibold",
+                                                children: stats.avg_fret_movement.toFixed(2)
+                                            }, void 0, false, {
+                                                fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
+                                                lineNumber: 109,
+                                                columnNumber: 17
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
+                                        lineNumber: 107,
+                                        columnNumber: 15
+                                    }, this),
+                                    stats.avg_string_jumps !== undefined && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
+                                        className: "flex justify-between items-center",
+                                        children: [
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                className: "text-slate-400 text-sm",
+                                                children: "Avg String Jumps"
+                                            }, void 0, false, {
+                                                fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
+                                                lineNumber: 114,
+                                                columnNumber: 17
+                                            }, this),
+                                            /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("span", {
+                                                className: "text-white font-semibold",
+                                                children: stats.avg_string_jumps.toFixed(2)
+                                            }, void 0, false, {
+                                                fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
+                                                lineNumber: 115,
+                                                columnNumber: 17
+                                            }, this)
+                                        ]
+                                    }, void 0, true, {
+                                        fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
+                                        lineNumber: 113,
+                                        columnNumber: 15
+                                    }, this)
+                                ]
+                            }, void 0, true, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
                                 lineNumber: 95,
                                 columnNumber: 11
@@ -732,14 +757,14 @@ function ResultView({ fileName, isPlaying, onPlayingChange, tablature, stats }) 
                                                 className: "w-4 h-4 text-cyan-400"
                                             }, void 0, false, {
                                                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
-                                                lineNumber: 102,
+                                                lineNumber: 125,
                                                 columnNumber: 15
                                             }, this),
                                             "Tablature"
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
-                                        lineNumber: 101,
+                                        lineNumber: 124,
                                         columnNumber: 13
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -750,27 +775,27 @@ function ResultView({ fileName, isPlaying, onPlayingChange, tablature, stats }) 
                                         children: copied ? 'Copied!' : 'Copy'
                                     }, void 0, false, {
                                         fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
-                                        lineNumber: 105,
+                                        lineNumber: 128,
                                         columnNumber: 13
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
-                                lineNumber: 100,
+                                lineNumber: 123,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 className: "font-mono text-sm text-slate-300 leading-relaxed whitespace-pre-wrap break-words max-w-full",
-                                children: SAMPLE_TAB
+                                children: tablature
                             }, void 0, false, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
-                                lineNumber: 114,
+                                lineNumber: 137,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
-                        lineNumber: 99,
+                        lineNumber: 122,
                         columnNumber: 9
                     }, this)
                 ]
@@ -787,7 +812,7 @@ function ResultView({ fileName, isPlaying, onPlayingChange, tablature, stats }) 
                         children: "Export Options"
                     }, void 0, false, {
                         fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
-                        lineNumber: 122,
+                        lineNumber: 145,
                         columnNumber: 9
                     }, this),
                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -801,14 +826,14 @@ function ResultView({ fileName, isPlaying, onPlayingChange, tablature, stats }) 
                                         className: "w-4 h-4 mr-2"
                                     }, void 0, false, {
                                         fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
-                                        lineNumber: 128,
+                                        lineNumber: 151,
                                         columnNumber: 13
                                     }, this),
                                     "Download as .txt"
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
-                                lineNumber: 124,
+                                lineNumber: 147,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -818,14 +843,14 @@ function ResultView({ fileName, isPlaying, onPlayingChange, tablature, stats }) 
                                         className: "w-4 h-4 mr-2"
                                     }, void 0, false, {
                                         fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
-                                        lineNumber: 134,
+                                        lineNumber: 157,
                                         columnNumber: 13
                                     }, this),
                                     "Download as MIDI"
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
-                                lineNumber: 131,
+                                lineNumber: 154,
                                 columnNumber: 11
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -834,19 +859,19 @@ function ResultView({ fileName, isPlaying, onPlayingChange, tablature, stats }) 
                                 children: "Share Link"
                             }, void 0, false, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
-                                lineNumber: 137,
+                                lineNumber: 160,
                                 columnNumber: 11
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
-                        lineNumber: 123,
+                        lineNumber: 146,
                         columnNumber: 9
                     }, this)
                 ]
             }, void 0, true, {
                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/result-view.tsx",
-                lineNumber: 121,
+                lineNumber: 144,
                 columnNumber: 7
             }, this)
         ]
@@ -1098,6 +1123,8 @@ function Home() {
     const [isPlaying, setIsPlaying] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     const [result, setResult] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
     const [error, setError] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('');
+    const [tuning, setTuning] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('standard');
+    const [method, setMethod] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])('pyin');
     const handleFileUpload = async (file)=>{
         setFileName(file.name);
         setState('processing');
@@ -1106,8 +1133,8 @@ function Home() {
             // Create FormData
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('method', 'pyin'); // or 'basic_pitch'
-            formData.append('tuning', 'standard');
+            formData.append('method', method);
+            formData.append('tuning', tuning);
             formData.append('min_duration', '0.1');
             formData.append('detailed', 'false');
             formData.append('preprocess', 'false');
@@ -1153,12 +1180,12 @@ function Home() {
                                         className: "w-6 h-6 text-white"
                                     }, void 0, false, {
                                         fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                        lineNumber: 85,
+                                        lineNumber: 90,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                    lineNumber: 84,
+                                    lineNumber: 89,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1168,7 +1195,7 @@ function Home() {
                                             children: "Axtone"
                                         }, void 0, false, {
                                             fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                            lineNumber: 88,
+                                            lineNumber: 93,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1176,19 +1203,19 @@ function Home() {
                                             children: "AI Vocal to Guitar Tab"
                                         }, void 0, false, {
                                             fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                            lineNumber: 89,
+                                            lineNumber: 94,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                    lineNumber: 87,
+                                    lineNumber: 92,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                            lineNumber: 83,
+                            lineNumber: 88,
                             columnNumber: 11
                         }, this),
                         state !== 'idle' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -1199,18 +1226,18 @@ function Home() {
                             children: "New Upload"
                         }, void 0, false, {
                             fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                            lineNumber: 93,
+                            lineNumber: 98,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                    lineNumber: 82,
+                    lineNumber: 87,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                lineNumber: 81,
+                lineNumber: 86,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("main", {
@@ -1231,13 +1258,13 @@ function Home() {
                                                 children: "Guitar Tabs"
                                             }, void 0, false, {
                                                 fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                                lineNumber: 112,
+                                                lineNumber: 117,
                                                 columnNumber: 35
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                        lineNumber: 111,
+                                        lineNumber: 116,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1245,33 +1272,33 @@ function Home() {
                                         children: "Upload a vocal recording and our AI will analyze the melody and generate accurate guitar tablature in seconds."
                                     }, void 0, false, {
                                         fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                        lineNumber: 114,
+                                        lineNumber: 119,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                lineNumber: 110,
+                                lineNumber: 115,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$components$2f$file$2d$uploader$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
                                 onFileSelect: handleFileUpload
                             }, void 0, false, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                lineNumber: 120,
+                                lineNumber: 125,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                        lineNumber: 108,
+                        lineNumber: 113,
                         columnNumber: 11
                     }, this),
                     state === 'processing' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$components$2f$processing$2d$state$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
                         fileName: fileName
                     }, void 0, false, {
                         fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                        lineNumber: 125,
+                        lineNumber: 130,
                         columnNumber: 11
                     }, this),
                     state === 'error' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1284,7 +1311,7 @@ function Home() {
                                     children: "Conversion Failed"
                                 }, void 0, false, {
                                     fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                    lineNumber: 131,
+                                    lineNumber: 136,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1292,7 +1319,7 @@ function Home() {
                                     children: error
                                 }, void 0, false, {
                                     fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                    lineNumber: 132,
+                                    lineNumber: 137,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -1301,18 +1328,18 @@ function Home() {
                                     children: "Try Again"
                                 }, void 0, false, {
                                     fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                    lineNumber: 133,
+                                    lineNumber: 138,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                            lineNumber: 130,
+                            lineNumber: 135,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                        lineNumber: 129,
+                        lineNumber: 134,
                         columnNumber: 11
                     }, this),
                     state === 'result' && result && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
@@ -1325,7 +1352,7 @@ function Home() {
                                 stats: result.stats
                             }, void 0, false, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                lineNumber: 145,
+                                lineNumber: 150,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1334,12 +1361,12 @@ function Home() {
                                     isPlaying: isPlaying
                                 }, void 0, false, {
                                     fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                    lineNumber: 153,
+                                    lineNumber: 158,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                lineNumber: 152,
+                                lineNumber: 157,
                                 columnNumber: 13
                             }, this)
                         ]
@@ -1347,17 +1374,17 @@ function Home() {
                 ]
             }, void 0, true, {
                 fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                lineNumber: 106,
+                lineNumber: 111,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-        lineNumber: 79,
+        lineNumber: 84,
         columnNumber: 5
     }, this);
 }
-_s(Home, "RppkiGPmNczcChhrnDPoNlYhgiA=");
+_s(Home, "XOcpWLNGZWoiL2aUTDlRDGxMk0k=");
 _c = Home;
 var _c;
 __turbopack_context__.k.register(_c, "Home");
@@ -1367,4 +1394,4 @@ if (typeof globalThis.$RefreshHelpers$ === 'object' && globalThis.$RefreshHelper
 }),
 ]);
 
-//# sourceMappingURL=codes_python_axtone_frontend_axtone_a831ba4d._.js.map
+//# sourceMappingURL=codes_python_axtone_frontend_axtone_c1945b68._.js.map

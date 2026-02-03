@@ -25,13 +25,14 @@ class TablatureFormatter:
         self.width = width
         self.string_names = ['e', 'B', 'G', 'D', 'A', 'E']  # High to low
     
-    def format(self, path: List[FretPosition], midi_sequence: List[MidiNote] = None) -> str:
+    def format(self, path: List[FretPosition], midi_sequence: List[MidiNote] = None, clean: bool = False) -> str:
         """
         Format fingering path as ASCII guitar tablature.
         
         Args:
             path: List of FretPosition objects
             midi_sequence: Optional list of MidiNote objects for metadata
+            clean: If True, return only the tab without headers/footers
             
         Returns:
             ASCII tablature string
@@ -40,11 +41,9 @@ class TablatureFormatter:
             return "No tablature to display."
         
         num_strings = 6
-        positions_per_line = (self.width - 2) // 4
         
-        # Build tablature in sections
-        sections = []
-        current_section = [f"{self.string_names[i]}|" for i in range(num_strings)]
+        # Build tablature as one continuous line (horizontal)
+        tab_lines = [f"{self.string_names[i]}|" for i in range(num_strings)]
         
         for idx, pos in enumerate(path):
             # Convert string index (0=low E) to display index (0=high e)
@@ -52,28 +51,22 @@ class TablatureFormatter:
             
             fret_str = str(pos.fret)
             
-            # Add to appropriate string line in current section
+            # Add to appropriate string line
             for i in range(num_strings):
                 if i == display_string:
-                    current_section[i] += f"{fret_str:>2}-"
+                    tab_lines[i] += f"{fret_str:>2}-"
                 else:
-                    current_section[i] += "---"
-            
-            # Line break if needed
-            if (idx + 1) % positions_per_line == 0 and idx < len(path) - 1:
-                # Close current section
-                for i in range(num_strings):
-                    current_section[i] += "|"
-                sections.append("\n".join(current_section))
-                # Start new section
-                current_section = [f"{self.string_names[i]}|" for i in range(num_strings)]
+                    tab_lines[i] += "---"
         
-        # Close final section
+        # Close all lines
         for i in range(num_strings):
-            current_section[i] += "|"
-        sections.append("\n".join(current_section))
+            tab_lines[i] += "|"
         
-        tablature = "\n".join(sections)
+        tablature = "\n".join(tab_lines)
+        
+        # Return clean version if requested
+        if clean:
+            return tablature
         
         # Add header
         header = "=" * self.width + "\n"
