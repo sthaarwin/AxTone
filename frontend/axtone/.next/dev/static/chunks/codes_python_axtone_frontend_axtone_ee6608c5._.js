@@ -988,10 +988,94 @@ const STRINGS = [
     }
 ];
 const FRETS = 24;
-function InteractiveFretboard({ isPlaying }) {
+// Convert MIDI note number to frequency
+function midiToFrequency(midi) {
+    return 440 * Math.pow(2, (midi - 69) / 12);
+}
+function InteractiveFretboard({ isPlaying, notes }) {
     _s();
     const canvasRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
     const [highlightedFret, setHighlightedFret] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(null);
+    const audioContextRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(null);
+    const startTimeRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(0);
+    const animationFrameRef = (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useRef"])(0);
+    // Play a note with Web Audio API
+    const playNote = (frequency, duration)=>{
+        if (!audioContextRef.current) {
+            audioContextRef.current = new AudioContext();
+        }
+        const ctx = audioContextRef.current;
+        const now = ctx.currentTime;
+        // Create oscillator for the note
+        const oscillator = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        // Guitar-like sound using triangle wave
+        oscillator.type = 'triangle';
+        oscillator.frequency.setValueAtTime(frequency, now);
+        // ADSR envelope for guitar-like attack
+        gainNode.gain.setValueAtTime(0, now);
+        gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01); // Quick attack
+        gainNode.gain.exponentialRampToValueAtTime(0.1, now + 0.1); // Decay
+        gainNode.gain.exponentialRampToValueAtTime(0.05, now + duration); // Sustain
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration + 0.1); // Release
+        oscillator.start(now);
+        oscillator.stop(now + duration + 0.1);
+    };
+    // Animation and playback loop
+    (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
+        "InteractiveFretboard.useEffect": ()=>{
+            if (!isPlaying || notes.length === 0) {
+                if (animationFrameRef.current) {
+                    cancelAnimationFrame(animationFrameRef.current);
+                }
+                setHighlightedFret(null);
+                return;
+            }
+            startTimeRef.current = Date.now() / 1000;
+            const animate = {
+                "InteractiveFretboard.useEffect.animate": ()=>{
+                    const currentTime = Date.now() / 1000 - startTimeRef.current;
+                    // Find the note that should be playing now
+                    const currentNote = notes.find({
+                        "InteractiveFretboard.useEffect.animate.currentNote": (note)=>currentTime >= note.onset && currentTime < note.offset
+                    }["InteractiveFretboard.useEffect.animate.currentNote"]);
+                    if (currentNote) {
+                        setHighlightedFret({
+                            string: currentNote.string,
+                            fret: currentNote.fret
+                        });
+                        // Play the note sound (only when transitioning to a new note)
+                        const prevNote = notes.find({
+                            "InteractiveFretboard.useEffect.animate.prevNote": (note)=>currentTime - 0.05 >= note.onset && currentTime - 0.05 < note.offset
+                        }["InteractiveFretboard.useEffect.animate.prevNote"]);
+                        if (!prevNote || prevNote !== currentNote) {
+                            const frequency = midiToFrequency(currentNote.midi);
+                            const duration = currentNote.offset - currentNote.onset;
+                            playNote(frequency, Math.min(duration, 1));
+                        }
+                    } else if (currentTime > notes[notes.length - 1].offset) {
+                        // Song finished, loop back
+                        startTimeRef.current = Date.now() / 1000;
+                    }
+                    animationFrameRef.current = requestAnimationFrame(animate);
+                }
+            }["InteractiveFretboard.useEffect.animate"];
+            animate();
+            return ({
+                "InteractiveFretboard.useEffect": ()=>{
+                    if (animationFrameRef.current) {
+                        cancelAnimationFrame(animationFrameRef.current);
+                    }
+                }
+            })["InteractiveFretboard.useEffect"];
+        }
+    }["InteractiveFretboard.useEffect"], [
+        isPlaying,
+        notes
+    ]);
+    // Draw fretboard
     (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useEffect"])({
         "InteractiveFretboard.useEffect": ()=>{
             const canvas = canvasRef.current;
@@ -1045,41 +1129,10 @@ function InteractiveFretboard({ isPlaying }) {
                     }
                 }
             }["InteractiveFretboard.useEffect"]);
-            // Animate highlighted note when playing
-            if (isPlaying) {
-                const time = Date.now() / 1000;
-                const notePattern = [
-                    {
-                        string: 1,
-                        fret: 2
-                    },
-                    {
-                        string: 2,
-                        fret: 3
-                    },
-                    {
-                        string: 3,
-                        fret: 2
-                    },
-                    {
-                        string: 1,
-                        fret: 5
-                    },
-                    {
-                        string: 2,
-                        fret: 7
-                    },
-                    {
-                        string: 3,
-                        fret: 5
-                    }
-                ];
-                const index = Math.floor(time * 2) % notePattern.length;
-                setHighlightedFret(notePattern[index]);
-            }
         }
     }["InteractiveFretboard.useEffect"], [
-        isPlaying
+        isPlaying,
+        highlightedFret
     ]);
     return /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
         className: "rounded-xl border border-slate-800 bg-slate-900/50 p-6 backdrop-blur-sm",
@@ -1091,14 +1144,14 @@ function InteractiveFretboard({ isPlaying }) {
                         className: "w-4 h-4 text-cyan-400"
                     }, void 0, false, {
                         fileName: "[project]/codes/python/axtone/frontend/axtone/components/interactive-fretboard.tsx",
-                        lineNumber: 111,
+                        lineNumber: 195,
                         columnNumber: 9
                     }, this),
                     "Interactive Fretboard"
                 ]
             }, void 0, true, {
                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/interactive-fretboard.tsx",
-                lineNumber: 110,
+                lineNumber: 194,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1110,30 +1163,30 @@ function InteractiveFretboard({ isPlaying }) {
                     className: "w-full rounded-lg bg-slate-950 border border-slate-800 min-w-full"
                 }, void 0, false, {
                     fileName: "[project]/codes/python/axtone/frontend/axtone/components/interactive-fretboard.tsx",
-                    lineNumber: 115,
+                    lineNumber: 199,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/interactive-fretboard.tsx",
-                lineNumber: 114,
+                lineNumber: 198,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
                 className: "text-xs text-slate-500 mt-3",
-                children: isPlaying ? '♪ Playing - watch as notes highlight on the fretboard' : 'Press play to see notes highlighted on the fretboard'
+                children: isPlaying ? notes.length > 0 ? '♪ Playing with sound - watch and listen!' : '♪ Playing...' : notes.length > 0 ? `Ready to play ${notes.length} notes. Press play to hear them!` : 'Press play to see notes highlighted on the fretboard'
             }, void 0, false, {
                 fileName: "[project]/codes/python/axtone/frontend/axtone/components/interactive-fretboard.tsx",
-                lineNumber: 122,
+                lineNumber: 206,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/codes/python/axtone/frontend/axtone/components/interactive-fretboard.tsx",
-        lineNumber: 109,
+        lineNumber: 193,
         columnNumber: 5
     }, this);
 }
-_s(InteractiveFretboard, "/HS6LgXLSgHOyzDT+XqVYd6mZk8=");
+_s(InteractiveFretboard, "kKxx76//Vkbm5Km+b1b0L23az6s=");
 _c = InteractiveFretboard;
 var _c;
 __turbopack_context__.k.register(_c, "InteractiveFretboard");
@@ -1409,7 +1462,7 @@ function Home() {
             formData.append('method', method);
             formData.append('tuning', tuning);
             formData.append('min_duration', '0.1');
-            formData.append('detailed', 'false');
+            formData.append('detailed', 'true');
             formData.append('preprocess', 'false');
             // Call the Next.js API route (which forwards to Python)
             const response = await fetch('/api/convert', {
@@ -1463,12 +1516,12 @@ function Home() {
                                         className: "w-6 h-6 text-white"
                                     }, void 0, false, {
                                         fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                        lineNumber: 105,
+                                        lineNumber: 112,
                                         columnNumber: 15
                                     }, this)
                                 }, void 0, false, {
                                     fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                    lineNumber: 104,
+                                    lineNumber: 111,
                                     columnNumber: 13
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1478,7 +1531,7 @@ function Home() {
                                             children: "Axtone"
                                         }, void 0, false, {
                                             fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                            lineNumber: 108,
+                                            lineNumber: 115,
                                             columnNumber: 15
                                         }, this),
                                         /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1486,19 +1539,19 @@ function Home() {
                                             children: "AI Vocal to Guitar Tab"
                                         }, void 0, false, {
                                             fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                            lineNumber: 109,
+                                            lineNumber: 116,
                                             columnNumber: 15
                                         }, this)
                                     ]
                                 }, void 0, true, {
                                     fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                    lineNumber: 107,
+                                    lineNumber: 114,
                                     columnNumber: 13
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                            lineNumber: 103,
+                            lineNumber: 110,
                             columnNumber: 11
                         }, this),
                         state !== 'idle' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -1509,18 +1562,18 @@ function Home() {
                             children: "New Upload"
                         }, void 0, false, {
                             fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                            lineNumber: 113,
+                            lineNumber: 120,
                             columnNumber: 13
                         }, this)
                     ]
                 }, void 0, true, {
                     fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                    lineNumber: 102,
+                    lineNumber: 109,
                     columnNumber: 9
                 }, this)
             }, void 0, false, {
                 fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                lineNumber: 101,
+                lineNumber: 108,
                 columnNumber: 7
             }, this),
             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("main", {
@@ -1541,13 +1594,13 @@ function Home() {
                                                 children: "Guitar Tabs"
                                             }, void 0, false, {
                                                 fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                                lineNumber: 132,
+                                                lineNumber: 139,
                                                 columnNumber: 35
                                             }, this)
                                         ]
                                     }, void 0, true, {
                                         fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                        lineNumber: 131,
+                                        lineNumber: 138,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1555,13 +1608,13 @@ function Home() {
                                         children: "Upload a vocal recording and our AI will analyze the melody and generate accurate guitar tablature in seconds."
                                     }, void 0, false, {
                                         fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                        lineNumber: 134,
+                                        lineNumber: 141,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                lineNumber: 130,
+                                lineNumber: 137,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1573,12 +1626,12 @@ function Home() {
                                             onFileSelect: handleFileUpload
                                         }, void 0, false, {
                                             fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                            lineNumber: 142,
+                                            lineNumber: 149,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                        lineNumber: 141,
+                                        lineNumber: 148,
                                         columnNumber: 15
                                     }, this),
                                     /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1589,31 +1642,31 @@ function Home() {
                                             onMethodChange: setMethod
                                         }, void 0, false, {
                                             fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                            lineNumber: 145,
+                                            lineNumber: 152,
                                             columnNumber: 17
                                         }, this)
                                     }, void 0, false, {
                                         fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                        lineNumber: 144,
+                                        lineNumber: 151,
                                         columnNumber: 15
                                     }, this)
                                 ]
                             }, void 0, true, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                lineNumber: 140,
+                                lineNumber: 147,
                                 columnNumber: 13
                             }, this)
                         ]
                     }, void 0, true, {
                         fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                        lineNumber: 128,
+                        lineNumber: 135,
                         columnNumber: 11
                     }, this),
                     state === 'processing' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$components$2f$processing$2d$state$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
                         fileName: fileName
                     }, void 0, false, {
                         fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                        lineNumber: 157,
+                        lineNumber: 164,
                         columnNumber: 11
                     }, this),
                     state === 'error' && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1626,7 +1679,7 @@ function Home() {
                                     children: "Conversion Failed"
                                 }, void 0, false, {
                                     fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                    lineNumber: 163,
+                                    lineNumber: 170,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("p", {
@@ -1634,7 +1687,7 @@ function Home() {
                                     children: error
                                 }, void 0, false, {
                                     fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                    lineNumber: 164,
+                                    lineNumber: 171,
                                     columnNumber: 15
                                 }, this),
                                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$components$2f$ui$2f$button$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Button"], {
@@ -1643,18 +1696,18 @@ function Home() {
                                     children: "Try Again"
                                 }, void 0, false, {
                                     fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                    lineNumber: 165,
+                                    lineNumber: 172,
                                     columnNumber: 15
                                 }, this)
                             ]
                         }, void 0, true, {
                             fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                            lineNumber: 162,
+                            lineNumber: 169,
                             columnNumber: 13
                         }, this)
                     }, void 0, false, {
                         fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                        lineNumber: 161,
+                        lineNumber: 168,
                         columnNumber: 11
                     }, this),
                     state === 'result' && result && /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["Fragment"], {
@@ -1668,22 +1721,23 @@ function Home() {
                                 midiBase64: result.midi_base64
                             }, void 0, false, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                lineNumber: 177,
+                                lineNumber: 184,
                                 columnNumber: 13
                             }, this),
                             /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
                                 ref: fretboardRef,
                                 className: "mt-12",
                                 children: /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])(__TURBOPACK__imported__module__$5b$project$5d2f$codes$2f$python$2f$axtone$2f$frontend$2f$axtone$2f$components$2f$interactive$2d$fretboard$2e$tsx__$5b$app$2d$client$5d$__$28$ecmascript$29$__["default"], {
-                                    isPlaying: isPlaying
+                                    isPlaying: isPlaying,
+                                    notes: result.notes || []
                                 }, void 0, false, {
                                     fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                    lineNumber: 186,
+                                    lineNumber: 193,
                                     columnNumber: 15
                                 }, this)
                             }, void 0, false, {
                                 fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                                lineNumber: 185,
+                                lineNumber: 192,
                                 columnNumber: 13
                             }, this)
                         ]
@@ -1691,13 +1745,13 @@ function Home() {
                 ]
             }, void 0, true, {
                 fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-                lineNumber: 126,
+                lineNumber: 133,
                 columnNumber: 7
             }, this)
         ]
     }, void 0, true, {
         fileName: "[project]/codes/python/axtone/frontend/axtone/app/page.tsx",
-        lineNumber: 99,
+        lineNumber: 106,
         columnNumber: 5
     }, this);
 }

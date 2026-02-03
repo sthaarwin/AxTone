@@ -14,6 +14,13 @@ type AppState = 'idle' | 'processing' | 'result' | 'error'
 interface ConversionResult {
   tablature: string
   midi_base64?: string
+  notes?: Array<{
+    midi: number
+    onset: number
+    offset: number
+    string: number
+    fret: number
+  }>
   stats: {
     total_notes: number
     pitch_range: {
@@ -50,7 +57,7 @@ export default function Home() {
       formData.append('method', method)
       formData.append('tuning', tuning)
       formData.append('min_duration', '0.1')
-      formData.append('detailed', 'false')
+      formData.append('detailed', 'true')
       formData.append('preprocess', 'false')
       
       // Call the Next.js API route (which forwards to Python)
@@ -183,7 +190,10 @@ export default function Home() {
               midiBase64={result.midi_base64}
             />
             <div ref={fretboardRef} className="mt-12">
-              <InteractiveFretboard isPlaying={isPlaying} />
+              <InteractiveFretboard 
+                isPlaying={isPlaying} 
+                notes={result.notes || []}
+              />
             </div>
           </>
         )}

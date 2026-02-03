@@ -3,8 +3,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { Guitar } from 'lucide-react'
 
+interface Note {
+  midi: number
+  onset: number
+  offset: number
+  string: number
+  fret: number
+}
+
 interface InteractiveFretboardProps {
   isPlaying: boolean
+  notes: Note[]
 }
 
 const STRINGS = [
@@ -18,10 +27,100 @@ const STRINGS = [
 
 const FRETS = 24
 
-export default function InteractiveFretboard({ isPlaying }: InteractiveFretboardProps) {
+// Convert MIDI note number to frequency
+function midiToFrequency(midi: number): number {
+  return 440 * Math.pow(2, (midi - 69) / 12)
+}
+
+export default function InteractiveFretboard({ isPlaying, notes }: InteractiveFretboardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [highlightedFret, setHighlightedFret] = useState<{ string: number; fret: number } | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
+  const startTimeRef = useRef<number>(0)
+  const animationFrameRef = useRef<number>(0)
 
+  // Play a note with Web Audio API
+  const playNote = (frequency: number, duration: number) => {
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContext()
+    }
+
+    const ctx = audioContextRef.current
+    const now = ctx.currentTime
+
+    // Create oscillator for the note
+    const oscillator = ctx.createOscillator()
+    const gainNode = ctx.createGain()
+
+    oscillator.connect(gainNode)
+    gainNode.connect(ctx.destination)
+
+    // Guitar-like sound using triangle wave
+    oscillator.type = 'triangle'
+    oscillator.frequency.setValueAtTime(frequency, now)
+
+    // ADSR envelope for guitar-like attack
+    gainNode.gain.setValueAtTime(0, now)
+    gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01) // Quick attack
+    gainNode.gain.exponentialRampToValueAtTime(0.1, now + 0.1) // Decay
+    gainNode.gain.exponentialRampToValueAtTime(0.05, now + duration) // Sustain
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration + 0.1) // Release
+
+    oscillator.start(now)
+    oscillator.stop(now + duration + 0.1)
+  }
+
+  // Animation and playback loop
+  useEffect(() => {
+    if (!isPlaying || notes.length === 0) {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+      setHighlightedFret(null)
+      return
+    }
+
+    startTimeRef.current = Date.now() / 1000
+
+    const animate = () => {
+      const currentTime = Date.now() / 1000 - startTimeRef.current
+
+      // Find the note that should be playing now
+      const currentNote = notes.find(
+        note => currentTime >= note.onset && currentTime < note.offset
+      )
+
+      if (currentNote) {
+        setHighlightedFret({ string: currentNote.string, fret: currentNote.fret })
+        
+        // Play the note sound (only when transitioning to a new note)
+        const prevNote = notes.find(
+          note => currentTime - 0.05 >= note.onset && currentTime - 0.05 < note.offset
+        )
+        
+        if (!prevNote || prevNote !== currentNote) {
+          const frequency = midiToFrequency(currentNote.midi)
+          const duration = currentNote.offset - currentNote.onset
+          playNote(frequency, Math.min(duration, 1))
+        }
+      } else if (currentTime > notes[notes.length - 1].offset) {
+        // Song finished, loop back
+        startTimeRef.current = Date.now() / 1000
+      }
+
+      animationFrameRef.current = requestAnimationFrame(animate)
+    }
+
+    animate()
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+    }
+  }, [isPlaying, notes])
+
+  // Draw fretboard
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -88,22 +187,7 @@ export default function InteractiveFretboard({ isPlaying }: InteractiveFretboard
       }
     })
 
-    // Animate highlighted note when playing
-    if (isPlaying) {
-      const time = Date.now() / 1000
-      const notePattern = [
-        { string: 1, fret: 2 },
-        { string: 2, fret: 3 },
-        { string: 3, fret: 2 },
-        { string: 1, fret: 5 },
-        { string: 2, fret: 7 },
-        { string: 3, fret: 5 },
-      ]
-      
-      const index = Math.floor(time * 2) % notePattern.length
-      setHighlightedFret(notePattern[index])
-    }
-  }, [isPlaying])
+  }, [isPlaying, highlightedFret])
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 backdrop-blur-sm">
@@ -121,8 +205,12 @@ export default function InteractiveFretboard({ isPlaying }: InteractiveFretboard
       </div>
       <p className="text-xs text-slate-500 mt-3">
         {isPlaying 
-          ? '♪ Playing - watch as notes highlight on the fretboard' 
-          : 'Press play to see notes highlighted on the fretboard'}
+          ? notes.length > 0 
+            ? '♪ Playing with sound - watch and listen!' 
+            : '♪ Playing...' 
+          : notes.length > 0
+            ? `Ready to play ${notes.length} notes. Press play to hear them!`
+            : 'Press play to see notes highlighted on the fretboard'}
       </p>
     </div>
   )
