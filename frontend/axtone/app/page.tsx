@@ -41,12 +41,15 @@ export default function Home() {
   const [error, setError] = useState<string>('')
   const [tuning, setTuning] = useState('standard')
   const [method, setMethod] = useState('pyin')
+  const [fingering, setFingering] = useState('dijkstra')
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
   
   // Ref for scrolling to fretboard
   const fretboardRef = useRef<HTMLDivElement>(null)
 
   const handleFileUpload = async (file: File) => {
     setFileName(file.name)
+    setAudioUrl(URL.createObjectURL(file))
     setState('processing')
     setError('')
     
@@ -56,6 +59,7 @@ export default function Home() {
       formData.append('file', file)
       formData.append('method', method)
       formData.append('tuning', tuning)
+      formData.append('fingering', fingering)
       formData.append('min_duration', '0.1')
       formData.append('detailed', 'true')
       formData.append('preprocess', 'false')
@@ -152,8 +156,10 @@ export default function Home() {
                 <SettingsPanel 
                   tuning={tuning}
                   method={method}
+                  fingering={fingering}
                   onTuningChange={setTuning}
                   onMethodChange={setMethod}
+                  onFingeringChange={setFingering}
                 />
               </div>
             </div>
@@ -194,6 +200,7 @@ export default function Home() {
                 isPlaying={isPlaying} 
                 onPlayingChange={handlePlayToggle}
                 notes={result.notes || []}
+                audioUrl={audioUrl}
               />
             </div>
           </>

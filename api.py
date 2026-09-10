@@ -136,6 +136,7 @@ async def convert_audio_to_tab(
     file: UploadFile = File(...),
     method: str = Form("pyin"),
     tuning: str = Form("standard"),
+    fingering: str = Form("dijkstra"),
     min_duration: float = Form(0.1),
     detailed: bool = Form(False),
     preprocess: bool = Form(False),
@@ -286,7 +287,7 @@ async def convert_audio_to_tab(
 
         # ── Optimize fingering ────────────────────────────────────────────
         optimizer = FretboardOptimizer(tuning=tuning_notes)
-        path, _ = optimizer.optimize(midi_notes)  # optimize() returns (path, tablature)
+        path, _ = optimizer.optimize(midi_notes, method=fingering)  # optimize() returns (path, tablature)
 
         if not path:
             raise HTTPException(

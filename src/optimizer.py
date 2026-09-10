@@ -412,17 +412,41 @@ class FretboardOptimizer:
         return formatter.format(path, hand_positions=hand_positions)
 
     def optimize(self,
-                 midi_sequence: List[MidiNote]
+                 midi_sequence: List[MidiNote],
+                 method: str = "dijkstra"
                  ) -> Tuple[Optional[List[FretPosition]], str]:
         """
         Full pipeline: build graph → find path → format tablature.
 
         Args:
             midi_sequence: List of MidiNote objects in chronological order.
+            method: Optimization method ('dijkstra' or 'naive').
 
         Returns:
             ``(path, tablature)`` where *path* is None on failure.
         """
+        if not midi_sequence:
+            return [], ""
+            
+        if method == "naive":
+            print(f"Assigning fingering for {len(midi_sequence)} notes (Naive Lowest Fret)...")
+            path = []
+            self.hand_positions = []
+            for note in midi_sequence:
+                positions = self.get_possible_positions(note.midi_number)
+                if not positions:
+                    continue
+                # Pick the lowest possible fret
+                best_pos = min(positions, key=lambda p: p.fret)
+                path.append(best_pos)
+                self.hand_positions.append(None)
+            
+            if path:
+                tablature = self.format_tablature(path)
+                return path, tablature
+            return None, "No valid fingering path found."
+            
+        # Dijkstra path
         print(f"Optimizing fingering for {len(midi_sequence)} notes "
               f"(hand-position-aware Dijkstra)...")
         self.build_graph(midi_sequence)

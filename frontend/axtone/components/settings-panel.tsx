@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button'
 interface SettingsPanelProps {
   tuning: string
   method: string
+  fingering: string
   onTuningChange: (tuning: string) => void
   onMethodChange: (method: string) => void
+  onFingeringChange: (fingering: string) => void
 }
 
 const TUNINGS = [
@@ -22,11 +24,18 @@ const METHODS = [
   { value: 'pyin', label: 'PYIN', description: 'Fast & accurate signal processing' },
 ]
 
+const FINGERINGS = [
+  { value: 'dijkstra', label: 'Smart (Dijkstra)', description: 'Ergonomic hand-position routing' },
+  { value: 'naive', label: 'Naive', description: 'Just pick the lowest possible fret' },
+]
+
 export default function SettingsPanel({ 
   tuning, 
   method, 
+  fingering,
   onTuningChange, 
-  onMethodChange 
+  onMethodChange,
+  onFingeringChange
 }: SettingsPanelProps) {
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 backdrop-blur-sm">
@@ -76,6 +85,36 @@ export default function SettingsPanel({
                 <div className="flex-1">
                   <div className="text-sm font-medium text-slate-200">{m.label}</div>
                   <div className="text-xs text-slate-400">{m.description}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Fingering Selector */}
+        <div className="space-y-2">
+          <label className="text-sm text-slate-400">Fingering Optimization</label>
+          <div className="space-y-2">
+            {FINGERINGS.map(f => (
+              <label 
+                key={f.value}
+                className={`flex items-start p-3 rounded-lg border cursor-pointer transition-all ${
+                  fingering === f.value
+                    ? 'border-purple-500 bg-purple-500/10'
+                    : 'border-slate-700 bg-slate-800/50 hover:border-slate-600'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="fingering"
+                  value={f.value}
+                  checked={fingering === f.value}
+                  onChange={(e) => onFingeringChange(e.target.value)}
+                  className="mt-1 mr-3 accent-purple-500"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-slate-200">{f.label}</div>
+                  <div className="text-xs text-slate-400">{f.description}</div>
                 </div>
               </label>
             ))}

@@ -15,6 +15,7 @@ interface InteractiveFretboardProps {
   isPlaying: boolean
   onPlayingChange: (playing: boolean) => void
   notes: Note[]
+  audioUrl?: string | null
 }
 
 const STRING_META = [
@@ -40,7 +41,7 @@ interface ActivePluck {
 }
 
 /** Karplus-Strong plucked-string synthesis. Sounds like a real guitar. */
-function synthesizeString(ctx: AudioContext, frequency: number, duration: number): ActivePluck {
+function synthesizeString(ctx: AudioContext, frequency: number, duration: number, volume: number = 0.8): ActivePluck {
   const sr = ctx.sampleRate
   const N = Math.max(2, Math.round(sr / frequency))
   const totalSamples = Math.min(sr * 4, Math.max(sr, Math.ceil(sr * (duration + 1.5))))
@@ -61,8 +62,9 @@ function synthesizeString(ctx: AudioContext, frequency: number, duration: number
 
   const gain = ctx.createGain()
   const now = ctx.currentTime
-  gain.gain.setValueAtTime(0.4, now)
-  gain.gain.setValueAtTime(0.4, now + Math.max(0.01, duration * 0.7))
+  const baseGain = 0.5 * volume // Adjust base volume with slider
+  gain.gain.setValueAtTime(baseGain, now)
+  gain.gain.setValueAtTime(baseGain, now + Math.max(0.01, duration * 0.7))
   gain.gain.exponentialRampToValueAtTime(0.001, now + duration + 0.8)
 
   source.connect(gain)
@@ -77,9 +79,14 @@ export default function InteractiveFretboard({
   isPlaying,
   onPlayingChange,
   notes,
+  audioUrl
 }: InteractiveFretboardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const audioElRef = useRef<HTMLAudioElement>(null)
   const [highlightedNote, setHighlightedNote] = useState<Note | null>(null)
+  const [playOriginal, setPlayOriginal] = useState(false)
+  const [synthVolume, setSynthVolume] = useState(0.8)
+  
   const audioCtxRef = useRef<AudioContext | null>(null)
   const startAudioTimeRef = useRef<number>(0)
   const lastPlayedIdxRef = useRef<number>(-1)
@@ -186,6 +193,21 @@ export default function InteractiveFretboard({
   // Redraw whenever highlight changes
   useEffect(() => { drawFretboard(highlightedNote) }, [highlightedNote, drawFretboard])
 
+  // Manage original audio toggle during playback
+  useEffect(() => {
+    if (!audioElRef.current) return
+    if (!playOriginal && !audioElRef.current.paused) {
+      audioElRef.current.pause()
+    } else if (playOriginal && isPlaying && audioCtxRef.current) {
+      // Sync it up when toggled on mid-playback
+      const elapsed = audioCtxRef.current.currentTime - startAudioTimeRef.current
+      if (notes.length > 0) {
+         audioElRef.current.currentTime = notes[0].onset + elapsed
+         audioElRef.current.play().catch(() => {})
+      }
+    }
+  }, [playOriginal, isPlaying, notes])
+
   // ── Playback loop ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isPlaying || notes.length === 0) {
@@ -197,6 +219,10 @@ export default function InteractiveFretboard({
         if (active) active.source.stop()
       })
       activeStringsRef.current = new Array(6).fill(null)
+      // Stop original audio
+      if (audioElRef.current) {
+        audioElRef.current.pause()
+      }
       return
     }
 
@@ -208,6 +234,12 @@ export default function InteractiveFretboard({
     // Align AudioContext time so the first note starts immediately
     startAudioTimeRef.current = actx.currentTime - notes[0].onset
     lastPlayedIdxRef.current = -1
+
+    // Play original audio synced up
+    if (playOriginal && audioElRef.current) {
+      audioElRef.current.currentTime = notes[0].onset
+      audioElRef.current.play()
+    }
 
     const tick = () => {
       if (!audioCtxRef.current) return
@@ -242,12 +274,12 @@ export default function InteractiveFretboard({
           const newDuration = Math.max(0.08, note.offset - note.onset)
           active.gain.gain.cancelScheduledValues(now)
           active.gain.gain.setValueAtTime(active.gain.gain.value, now)
-          active.gain.gain.setValueAtTime(0.3, now + 0.05) // bump volume slightly for slide impact
+          active.gain.gain.setValueAtTime(0.3 * synthVolume, now + 0.05) // bump volume slightly for slide impact
           active.gain.gain.exponentialRampToValueAtTime(0.001, now + newDuration + 0.8)
         } else {
           // Normal pluck
           if (active) active.source.stop(actx.currentTime) // mute previous note on this string
-          activeStringsRef.current[note.string] = synthesizeString(actx, midiToFrequency(note.midi), Math.max(0.08, note.offset - note.onset))
+          activeStringsRef.current[note.string] = synthesizeString(actx, midiToFrequency(note.midi), Math.max(0.08, note.offset - note.onset), synthVolume)
         }
         
         setHighlightedNote(note)
@@ -280,6 +312,7 @@ export default function InteractiveFretboard({
         <Guitar className="w-4 h-4 text-cyan-400" />
         Interactive Fretboard
       </h3>
+      {audioUrl && <audio ref={audioElRef} src={audioUrl} className="hidden" />}
       <div className="overflow-x-auto">
         <canvas
           ref={canvasRef}
@@ -288,13 +321,45 @@ export default function InteractiveFretboard({
           className="w-full rounded-lg bg-slate-950 border border-slate-800"
         />
       </div>
-      <p className="text-xs text-slate-500 mt-3">
-        {isPlaying
-          ? '♪ Playing — Karplus-Strong string synthesis'
-          : notes.length > 0
-            ? `${notes.length} notes ready · press play to hear them`
-            : 'Press play to animate the fretboard'}
-      </p>
+      
+      <div className="flex flex-wrap items-center justify-between gap-4 mt-4 bg-slate-950/50 p-3 rounded-lg border border-slate-800/50">
+        <p className="text-xs text-slate-400 font-medium">
+          {isPlaying
+            ? '♪ Playing'
+            : notes.length > 0
+              ? `${notes.length} notes ready`
+              : 'Press play above'}
+        </p>
+
+        <div className="flex items-center gap-6">
+          {/* Synth Volume Slider */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-400">Guitar Synth:</span>
+            <input 
+              type="range" 
+              min="0" 
+              max="1" 
+              step="0.05"
+              value={synthVolume}
+              onChange={(e) => setSynthVolume(parseFloat(e.target.value))}
+              className="w-20 accent-cyan-500 h-1 bg-slate-700 rounded-full appearance-none"
+            />
+          </div>
+
+          {/* Original Audio Toggle */}
+          {audioUrl && (
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={playOriginal}
+                onChange={(e) => setPlayOriginal(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-slate-900"
+              />
+              <span className="text-xs text-slate-300 font-medium">Play Original Audio</span>
+            </label>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
