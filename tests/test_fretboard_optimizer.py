@@ -10,12 +10,8 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import unittest
-from src.fretboard_optimizer import (
-    FretboardOptimizer, 
-    MidiNote, 
-    FretPosition,
-    midi_number_to_note_name
-)
+from src.optimizer import FretboardOptimizer, FretPosition
+from src.extractor import MidiNote, midi_number_to_note_name
 
 
 class TestMidiNote(unittest.TestCase):

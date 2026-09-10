@@ -159,7 +159,7 @@ Examples:
     optimizer = FretboardOptimizer(tuning=tuning)
     
     try:
-        path = optimizer.optimize(midi_notes)
+        path, _ = optimizer.optimize(midi_notes)  # optimize() returns (path, tablature)
     except Exception as e:
         print(f"Error during optimization: {e}")
         sys.exit(1)
@@ -181,6 +181,7 @@ Examples:
         path,
         output_path,
         midi_sequence=midi_notes,
+        hand_positions=optimizer.hand_positions or None,
         detailed=args.detailed
     )
     

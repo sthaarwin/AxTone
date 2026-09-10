@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { Guitar } from 'lucide-react'
 
 interface Note {
@@ -13,182 +13,267 @@ interface Note {
 
 interface InteractiveFretboardProps {
   isPlaying: boolean
+  onPlayingChange: (playing: boolean) => void
   notes: Note[]
 }
 
-const STRINGS = [
-  { name: 'E', color: '#ef4444', frequency: 82.41 },
-  { name: 'A', color: '#f97316', frequency: 110.0 },
-  { name: 'D', color: '#eab308', frequency: 146.83 },
-  { name: 'G', color: '#22c55e', frequency: 196.0 },
-  { name: 'B', color: '#06b6d4', frequency: 246.94 },
-  { name: 'e', color: '#8b5cf6', frequency: 329.63 },
+const STRING_META = [
+  { name: 'E', color: '#ef4444' },  // 0 = low E  (top of canvas)
+  { name: 'A', color: '#f97316' },
+  { name: 'D', color: '#eab308' },
+  { name: 'G', color: '#22c55e' },
+  { name: 'B', color: '#06b6d4' },
+  { name: 'e', color: '#8b5cf6' },  // 5 = high e (bottom of canvas)
 ]
 
-const FRETS = 24
+const FRETS = 22
+const MARKER_FRETS = [3, 5, 7, 9, 12, 15, 17, 19, 21]
 
-// Convert MIDI note number to frequency
 function midiToFrequency(midi: number): number {
   return 440 * Math.pow(2, (midi - 69) / 12)
 }
 
-export default function InteractiveFretboard({ isPlaying, notes }: InteractiveFretboardProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [highlightedFret, setHighlightedFret] = useState<{ string: number; fret: number } | null>(null)
-  const audioContextRef = useRef<AudioContext | null>(null)
-  const startTimeRef = useRef<number>(0)
-  const animationFrameRef = useRef<number>(0)
+interface ActivePluck {
+  source: AudioBufferSourceNode
+  gain: GainNode
+  baseFreq: number
+}
 
-  // Play a note with Web Audio API
-  const playNote = (frequency: number, duration: number) => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContext()
-    }
+/** Karplus-Strong plucked-string synthesis. Sounds like a real guitar. */
+function synthesizeString(ctx: AudioContext, frequency: number, duration: number): ActivePluck {
+  const sr = ctx.sampleRate
+  const N = Math.max(2, Math.round(sr / frequency))
+  const totalSamples = Math.min(sr * 4, Math.max(sr, Math.ceil(sr * (duration + 1.5))))
 
-    const ctx = audioContextRef.current
-    const now = ctx.currentTime
+  const buf = ctx.createBuffer(1, totalSamples, sr)
+  const data = buf.getChannelData(0)
 
-    // Create oscillator for the note
-    const oscillator = ctx.createOscillator()
-    const gainNode = ctx.createGain()
+  // Noise excitation: one period of white noise (the "pick" attack)
+  for (let i = 0; i < N; i++) data[i] = Math.random() * 2 - 1
 
-    oscillator.connect(gainNode)
-    gainNode.connect(ctx.destination)
-
-    // Guitar-like sound using triangle wave
-    oscillator.type = 'triangle'
-    oscillator.frequency.setValueAtTime(frequency, now)
-
-    // ADSR envelope for guitar-like attack
-    gainNode.gain.setValueAtTime(0, now)
-    gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01) // Quick attack
-    gainNode.gain.exponentialRampToValueAtTime(0.1, now + 0.1) // Decay
-    gainNode.gain.exponentialRampToValueAtTime(0.05, now + duration) // Sustain
-    gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration + 0.1) // Release
-
-    oscillator.start(now)
-    oscillator.stop(now + duration + 0.1)
+  // Karplus-Strong feedback: 2-point averaging = lowpass + delay = decaying tone
+  for (let i = N; i < totalSamples; i++) {
+    data[i] = 0.4985 * (data[i - N] + (i - N - 1 >= 0 ? data[i - N - 1] : 0))
   }
 
-  // Animation and playback loop
-  useEffect(() => {
-    if (!isPlaying || notes.length === 0) {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
-      setHighlightedFret(null)
-      return
-    }
+  const source = ctx.createBufferSource()
+  source.buffer = buf
 
-    startTimeRef.current = Date.now() / 1000
+  const gain = ctx.createGain()
+  const now = ctx.currentTime
+  gain.gain.setValueAtTime(0.4, now)
+  gain.gain.setValueAtTime(0.4, now + Math.max(0.01, duration * 0.7))
+  gain.gain.exponentialRampToValueAtTime(0.001, now + duration + 0.8)
 
-    const animate = () => {
-      const currentTime = Date.now() / 1000 - startTimeRef.current
+  source.connect(gain)
+  gain.connect(ctx.destination)
+  source.start(now)
+  source.stop(now + duration + 1.5)
+  
+  return { source, gain, baseFreq: frequency }
+}
 
-      // Find the note that should be playing now
-      const currentNote = notes.find(
-        note => currentTime >= note.onset && currentTime < note.offset
-      )
+export default function InteractiveFretboard({
+  isPlaying,
+  onPlayingChange,
+  notes,
+}: InteractiveFretboardProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const [highlightedNote, setHighlightedNote] = useState<Note | null>(null)
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const startAudioTimeRef = useRef<number>(0)
+  const lastPlayedIdxRef = useRef<number>(-1)
+  const rafRef = useRef<number>(0)
+  const activeStringsRef = useRef<(ActivePluck | null)[]>(new Array(6).fill(null))
 
-      if (currentNote) {
-        setHighlightedFret({ string: currentNote.string, fret: currentNote.fret })
-        
-        // Play the note sound (only when transitioning to a new note)
-        const prevNote = notes.find(
-          note => currentTime - 0.05 >= note.onset && currentTime - 0.05 < note.offset
-        )
-        
-        if (!prevNote || prevNote !== currentNote) {
-          const frequency = midiToFrequency(currentNote.midi)
-          const duration = currentNote.offset - currentNote.onset
-          playNote(frequency, Math.min(duration, 1))
-        }
-      } else if (currentTime > notes[notes.length - 1].offset) {
-        // Song finished, loop back
-        startTimeRef.current = Date.now() / 1000
-      }
-
-      animationFrameRef.current = requestAnimationFrame(animate)
-    }
-
-    animate()
-
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
-    }
-  }, [isPlaying, notes])
-
-  // Draw fretboard
-  useEffect(() => {
+  // ── Canvas drawing ──────────────────────────────────────────────────────────
+  const drawFretboard = useCallback((highlighted: Note | null) => {
     const canvas = canvasRef.current
     if (!canvas) return
-
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const padding = 40
-    const width = canvas.width
-    const height = canvas.height
-    const stringSpacing = (height - 2 * padding) / (STRINGS.length - 1)
-    const fretSpacing = (width - 2 * padding) / FRETS
+    const W = canvas.width
+    const H = canvas.height
+    const padL = 52
+    const padR = 16
+    const padT = 28
+    const padB = 16
 
-    // Clear canvas
+    const nStrings = STRING_META.length
+    const strGap = (H - padT - padB) / (nStrings - 1)
+    const fretGap = (W - padL - padR) / FRETS
+
+    // Background
     ctx.fillStyle = '#0f172a'
-    ctx.fillRect(0, 0, width, height)
+    ctx.fillRect(0, 0, W, H)
 
-    // Draw frets
-    ctx.strokeStyle = '#334155'
-    ctx.lineWidth = 1
+    // Position dot markers (background colour, drawn before strings)
+    ctx.fillStyle = '#1e293b'
+    MARKER_FRETS.forEach(f => {
+      const x = padL + (f - 0.5) * fretGap
+      const midY = padT + strGap * (nStrings - 1) / 2
+      if (f === 12) {
+        ctx.beginPath(); ctx.arc(x, midY - strGap * 0.65, 5, 0, Math.PI * 2); ctx.fill()
+        ctx.beginPath(); ctx.arc(x, midY + strGap * 0.65, 5, 0, Math.PI * 2); ctx.fill()
+      } else {
+        ctx.beginPath(); ctx.arc(x, midY, 6, 0, Math.PI * 2); ctx.fill()
+      }
+      // Fret number label
+      ctx.fillStyle = '#475569'
+      ctx.font = '9px monospace'
+      ctx.textAlign = 'center'
+      ctx.fillText(String(f), x, padT - 10)
+      ctx.fillStyle = '#1e293b'
+    })
 
-    for (let i = 0; i <= FRETS; i++) {
-      const x = padding + i * fretSpacing
+    // Fret bars
+    for (let f = 0; f <= FRETS; f++) {
+      const x = padL + f * fretGap
+      ctx.strokeStyle = f === 0 ? '#94a3b8' : '#334155'
+      ctx.lineWidth = f === 0 ? 3 : 1
       ctx.beginPath()
-      ctx.moveTo(x, padding)
-      ctx.lineTo(x, height - padding)
+      ctx.moveTo(x, padT)
+      ctx.lineTo(x, H - padB)
       ctx.stroke()
     }
 
-    // Draw strings
-    STRINGS.forEach((string, stringIndex) => {
-      const y = padding + stringIndex * stringSpacing
+    // String lines & highlight
+    STRING_META.forEach((str, si) => {
+      const y = padT + si * strGap
+      // String thickness: low E (~2.2px) → high e (~0.6px)
+      const thickness = 2.2 - si * 0.27
+      const isHighlighted = highlighted !== null && highlighted.string === si
 
-      // String line
-      ctx.strokeStyle = string.color
-      ctx.lineWidth = 2
+      ctx.strokeStyle = isHighlighted ? str.color : `${str.color}55`
+      ctx.lineWidth = thickness
       ctx.beginPath()
-      ctx.moveTo(padding, y)
-      ctx.lineTo(width - padding, y)
+      ctx.moveTo(padL, y)
+      ctx.lineTo(W - padR, y)
       ctx.stroke()
 
       // String label
-      ctx.fillStyle = '#cbd5e1'
-      ctx.font = '14px monospace'
+      ctx.fillStyle = '#94a3b8'
+      ctx.font = `bold 12px monospace`
       ctx.textAlign = 'right'
-      ctx.fillText(string.name, padding - 15, y + 5)
+      ctx.fillText(str.name, padL - 6, y + 4)
 
-      // Draw fret dots
-      ctx.fillStyle = '#64748b'
-      for (let fret = 0; fret <= FRETS; fret++) {
-        const x = padding + fret * fretSpacing
-        const dotSize = 3
+      // Highlighted note circle
+      if (isHighlighted && highlighted) {
+        const fret = highlighted.fret
+        // Open string: draw on the nut side; otherwise midpoint between fret-1 and fret
+        const cx = fret === 0 ? padL - 14 : padL + (fret - 0.5) * fretGap
+        const cy = y
 
-        // Highlight if this is the current playing note
-        if (
-          isPlaying &&
-          highlightedFret &&
-          stringIndex === highlightedFret.string &&
-          fret === highlightedFret.fret
-        ) {
-          ctx.fillStyle = string.color
-          ctx.fillRect(x - 5, y - 5, 10, 10)
-        }
+        // Glow
+        ctx.shadowColor = str.color
+        ctx.shadowBlur = 20
+        ctx.fillStyle = str.color
+        ctx.beginPath()
+        ctx.arc(cx, cy, 11, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.shadowBlur = 0
+
+        // Fret number label inside dot
+        ctx.fillStyle = '#0f172a'
+        ctx.font = 'bold 9px monospace'
+        ctx.textAlign = 'center'
+        ctx.fillText(String(fret), cx, cy + 3)
       }
     })
+  }, [])
 
-  }, [isPlaying, highlightedFret])
+  // Redraw whenever highlight changes
+  useEffect(() => { drawFretboard(highlightedNote) }, [highlightedNote, drawFretboard])
 
+  // ── Playback loop ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!isPlaying || notes.length === 0) {
+      cancelAnimationFrame(rafRef.current)
+      setHighlightedNote(null)
+      lastPlayedIdxRef.current = -1
+      // Stop all active strings
+      activeStringsRef.current.forEach(active => {
+        if (active) active.source.stop()
+      })
+      activeStringsRef.current = new Array(6).fill(null)
+      return
+    }
+
+    // Init / resume AudioContext
+    if (!audioCtxRef.current) audioCtxRef.current = new AudioContext()
+    const actx = audioCtxRef.current
+    if (actx.state === 'suspended') actx.resume()
+
+    // Align AudioContext time so the first note starts immediately
+    startAudioTimeRef.current = actx.currentTime - notes[0].onset
+    lastPlayedIdxRef.current = -1
+
+    const tick = () => {
+      if (!audioCtxRef.current) return
+      const elapsed = audioCtxRef.current.currentTime - startAudioTimeRef.current
+
+      // Advance monotonically through notes, playing each one exactly once
+      let idx = lastPlayedIdxRef.current
+      while (idx + 1 < notes.length && notes[idx + 1].onset <= elapsed + 0.02) {
+        idx++
+        const note = notes[idx]
+        
+        let isSlide = false
+        if (idx > 0) {
+          const prevNote = notes[idx - 1]
+          if (note.string === prevNote.string && (note.onset - prevNote.offset) < 0.05) {
+            isSlide = true
+          }
+        }
+
+        const active = activeStringsRef.current[note.string]
+        
+        if (isSlide && active) {
+          // Slide existing pluck! Sweep playback rate to match target pitch
+          const targetFreq = midiToFrequency(note.midi)
+          const ratio = targetFreq / active.baseFreq
+          const now = actx.currentTime
+          
+          active.source.playbackRate.setValueAtTime(active.source.playbackRate.value, now)
+          active.source.playbackRate.linearRampToValueAtTime(ratio, now + 0.08) // 80ms glide
+          
+          // Extend decay
+          const newDuration = Math.max(0.08, note.offset - note.onset)
+          active.gain.gain.cancelScheduledValues(now)
+          active.gain.gain.setValueAtTime(active.gain.gain.value, now)
+          active.gain.gain.setValueAtTime(0.3, now + 0.05) // bump volume slightly for slide impact
+          active.gain.gain.exponentialRampToValueAtTime(0.001, now + newDuration + 0.8)
+        } else {
+          // Normal pluck
+          if (active) active.source.stop(actx.currentTime) // mute previous note on this string
+          activeStringsRef.current[note.string] = synthesizeString(actx, midiToFrequency(note.midi), Math.max(0.08, note.offset - note.onset))
+        }
+        
+        setHighlightedNote(note)
+        lastPlayedIdxRef.current = idx
+      }
+
+      // Auto-stop when song ends
+      if (elapsed > notes[notes.length - 1].offset + 0.8) {
+        onPlayingChange(false)
+        setHighlightedNote(null)
+        lastPlayedIdxRef.current = -1
+        return  // don't request next frame
+      }
+
+      // Clear highlight when current note has ended
+      const cur = lastPlayedIdxRef.current >= 0 ? notes[lastPlayedIdxRef.current] : null
+      if (cur && elapsed > cur.offset + 0.05) setHighlightedNote(null)
+
+      rafRef.current = requestAnimationFrame(tick)
+    }
+
+    tick()
+    return () => cancelAnimationFrame(rafRef.current)
+  }, [isPlaying, notes, onPlayingChange])
+
+  // ── JSX ─────────────────────────────────────────────────────────────────────
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-6 backdrop-blur-sm">
       <h3 className="text-sm font-semibold text-slate-200 mb-4 flex items-center gap-2">
@@ -198,19 +283,17 @@ export default function InteractiveFretboard({ isPlaying, notes }: InteractiveFr
       <div className="overflow-x-auto">
         <canvas
           ref={canvasRef}
-          width={800}
-          height={280}
-          className="w-full rounded-lg bg-slate-950 border border-slate-800 min-w-full"
+          width={920}
+          height={220}
+          className="w-full rounded-lg bg-slate-950 border border-slate-800"
         />
       </div>
       <p className="text-xs text-slate-500 mt-3">
-        {isPlaying 
-          ? notes.length > 0 
-            ? '♪ Playing with sound - watch and listen!' 
-            : '♪ Playing...' 
+        {isPlaying
+          ? '♪ Playing — Karplus-Strong string synthesis'
           : notes.length > 0
-            ? `Ready to play ${notes.length} notes. Press play to hear them!`
-            : 'Press play to see notes highlighted on the fretboard'}
+            ? `${notes.length} notes ready · press play to hear them`
+            : 'Press play to animate the fretboard'}
       </p>
     </div>
   )

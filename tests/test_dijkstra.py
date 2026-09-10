@@ -90,7 +90,7 @@ class TestDijkstraAlgorithm(unittest.TestCase):
     def test_single_note_path(self):
         """Single note should return valid path."""
         melody = [MidiNote(60, 0.0, 0.5)]
-        path = self.optimizer.optimize(melody)
+        path, _ = self.optimizer.optimize(melody)
         
         self.assertIsNotNone(path)
         self.assertEqual(len(path), 1)
@@ -102,7 +102,7 @@ class TestDijkstraAlgorithm(unittest.TestCase):
             MidiNote(60, 0.0, 0.5),
             MidiNote(62, 0.5, 1.0)
         ]
-        path = self.optimizer.optimize(melody)
+        path, _ = self.optimizer.optimize(melody)
         
         self.assertIsNotNone(path)
         self.assertEqual(len(path), 2)
@@ -118,7 +118,7 @@ class TestDijkstraAlgorithm(unittest.TestCase):
             MidiNote(65, 1.5, 2.0),
             MidiNote(67, 2.0, 2.5)
         ]
-        path = self.optimizer.optimize(melody)
+        path, _ = self.optimizer.optimize(melody)
         
         self.assertIsNotNone(path)
         self.assertEqual(len(path), 5)
@@ -134,7 +134,7 @@ class TestDijkstraAlgorithm(unittest.TestCase):
             MidiNote(64, 0.5, 1.0),  # E4
         ]
         
-        path = self.optimizer.optimize(melody)
+        path, _ = self.optimizer.optimize(melody)
         
         # Calculate total cost
         cost = self.optimizer.calculate_transition_cost(path[0], path[1])
@@ -144,13 +144,13 @@ class TestDijkstraAlgorithm(unittest.TestCase):
     
     def test_empty_melody(self):
         """Empty melody should return None."""
-        path = self.optimizer.optimize([])
+        path, _ = self.optimizer.optimize([])
         self.assertIsNone(path)
     
     def test_unplayable_note(self):
         """Very high notes might return None or limited path."""
         melody = [MidiNote(100, 0.0, 0.5)]  # Very high note
-        path = self.optimizer.optimize(melody)
+        path, _ = self.optimizer.optimize(melody)
         
         # Either None or very limited positions
         if path:
@@ -210,7 +210,7 @@ class TestCustomTuning(unittest.TestCase):
         optimizer = FretboardOptimizer(tuning=drop_d)
         
         melody = [MidiNote(62, 0.0, 0.5)]  # D4
-        path = optimizer.optimize(melody)
+        path, _ = optimizer.optimize(melody)
         
         self.assertIsNotNone(path)
         self.assertEqual(path[0].midi_note, 62)

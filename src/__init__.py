@@ -5,7 +5,7 @@ This package provides tools for converting audio files into optimized guitar tab
 using pitch detection and graph algorithms.
 """
 
-from .extractor import AudioExtractor, MidiNote, midi_number_to_note_name
+from .extractor import AudioExtractor, MidiNote, midi_number_to_note_name, consolidate_notes
 from .optimizer import FretboardOptimizer, FretPosition
 from .formatter import TablatureFormatter, print_tablature
 from . import utils

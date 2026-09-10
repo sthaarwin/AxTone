@@ -232,36 +232,88 @@ class AudioExtractor:
     
     def save_midi(self, notes: List[MidiNote], output_path: str) -> None:
         """
-        Save MIDI notes to a .mid file.
-        
-        Args:
-            notes: List of MidiNote objects
-            output_path: Path to save MIDI file
+        Save MIDI notes to a .mid file. First tries pretty_midi, then falls back to mido.
         """
-        if not PRETTY_MIDI_AVAILABLE:
-            raise ImportError("Pretty MIDI is not installed. Use: pip install pretty-midi")
+        if PRETTY_MIDI_AVAILABLE:
+            midi = pretty_midi.PrettyMIDI()
+            guitar = pretty_midi.Instrument(program=24)
+            for note in notes:
+                midi_note = pretty_midi.Note(
+                    velocity=note.velocity, pitch=note.midi_number,
+                    start=note.onset, end=note.offset
+                )
+                guitar.notes.append(midi_note)
+            midi.instruments.append(guitar)
+            midi.write(output_path)
+            print(f"Saved MIDI to: {output_path} (using pretty_midi)")
+            return
+
+        # Fallback: Use mido (already in requirements.txt)
+        import mido
+        mid = mido.MidiFile(type=0)
+        mid.ticks_per_beat = 480
+        track = mido.MidiTrack()
+        mid.tracks.append(track)
         
-        # Create PrettyMIDI object
-        midi = pretty_midi.PrettyMIDI()
-        
-        # Create instrument (acoustic guitar)
-        guitar = pretty_midi.Instrument(program=24)  # Acoustic guitar
-        
-        # Add notes
+        # Initial meta messages
+        track.append(mido.MetaMessage('set_tempo', tempo=500000, time=0))
+        track.append(mido.Message('program_change', program=24, time=0, channel=0))
+
+        # Build list of events
+        events = []
         for note in notes:
-            midi_note = pretty_midi.Note(
-                velocity=note.velocity,
-                pitch=note.midi_number,
-                start=note.onset,
-                end=note.offset
+            start_ticks = int(note.onset * 960)
+            end_ticks = int(note.offset * 960)
+            events.append((start_ticks, 'note_on', note.midi_number, note.velocity))
+            events.append((end_ticks, 'note_off', note.midi_number, 0))
+
+        # Sort by absolute ticks, then convert to delta time
+        events.sort(key=lambda x: x[0])
+        last_tick = 0
+        for abs_tick, msg_type, pitch, vel in events:
+            delta = abs_tick - last_tick
+            track.append(mido.Message(msg_type, note=pitch, velocity=vel, time=delta, channel=0))
+            last_tick = abs_tick
+
+        mid.save(output_path)
+        print(f"Saved MIDI to: {output_path} (using mido)")
+
+def consolidate_notes(
+    notes: List[MidiNote],
+    min_duration: float = 0.08,
+    merge_gap: float = 0.05,
+) -> List[MidiNote]:
+    """
+    Remove micro-notes and merge near-consecutive same-pitch notes.
+    """
+    if not notes: return notes
+    notes = sorted(notes, key=lambda n: n.onset)
+
+    # 1: remove tiny notes
+    notes = [n for n in notes if (n.offset - n.onset) >= min_duration]
+    if not notes: return notes
+
+    # 2: merge consecutive notes of same pitch
+    merged: List[MidiNote] = []
+    current = notes[0]
+
+    for nxt in notes[1:]:
+        same_pitch = nxt.midi_number == current.midi_number
+        small_gap  = (nxt.onset - current.offset) <= merge_gap
+
+        if same_pitch and small_gap:
+            current = MidiNote(
+                midi_number=current.midi_number,
+                onset=current.onset,
+                offset=nxt.offset,
+                velocity=max(current.velocity, nxt.velocity),
             )
-            guitar.notes.append(midi_note)
-        
-        midi.instruments.append(guitar)
-        
-        # Write to file
-        midi.write(output_path)
-        print(f"Saved MIDI to: {output_path}")
+        else:
+            merged.append(current)
+            current = nxt
+
+    merged.append(current)
+    return merged
 
 
 def midi_number_to_note_name(midi_number: int) -> str:

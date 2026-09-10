@@ -6,102 +6,127 @@ Provides REST API endpoints for the Next.js frontend
 
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse
 import tempfile
 import os
+import re
 from pathlib import Path
 from typing import Optional
 import base64
+import asyncio
+import librosa
+from fastapi.concurrency import run_in_threadpool
 
 from src.extractor import AudioExtractor, midi_number_to_note_name
 from src.optimizer import FretboardOptimizer
 from src.formatter import TablatureFormatter
 
+# ── Constants ────────────────────────────────────────────────────────────────
+MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024  # 50 MB
+MAX_DURATION_SECONDS = 60  # 1 minute max duration
+MAX_CONCURRENT_JOBS = 2
 
-def filter_notes_to_guitar_range(notes, tuning, max_fret=22):
+# Limit simultaneous heavy ML processing to avoid out-of-memory crashes
+processing_semaphore = asyncio.Semaphore(MAX_CONCURRENT_JOBS)
+
+ALLOWED_EXTENSIONS = ('.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac')
+
+TUNINGS = {
+    'standard': [40, 45, 50, 55, 59, 64],  # E2-A2-D3-G3-B3-E4
+    'drop-d':   [38, 45, 50, 55, 59, 64],  # D2-A2-D3-G3-B3-E4
+    'drop-c':   [36, 43, 48, 53, 57, 62],  # C2-G2-C3-F3-A3-D4
+    'open-g':   [38, 43, 50, 55, 59, 62],  # D2-G2-D3-G3-B3-D4
+    'dadgad':   [38, 45, 50, 55, 45, 50],  # D2-A2-D3-G3-A3-D4
+}
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def sanitize_filename(filename: str) -> str:
     """
-    Filter MIDI notes to only include those playable on guitar with the given tuning.
-    
-    Args:
-        notes: List of MidiNote objects
-        tuning: List of open string MIDI numbers
-        max_fret: Maximum fret number
-    
-    Returns:
-        Filtered list of MidiNote objects
+    Return a safe version of *filename* suitable for use as a temp-file suffix.
+
+    Keeps only the extension (e.g. '.mp3') after stripping any path components,
+    replacing spaces, and removing characters that could be mis-parsed by the
+    OS or by HTTP multipart parsers.
     """
-    min_note = min(tuning)  # Lowest open string
-    max_note = max(tuning) + max_fret  # Highest fret on highest string
-    
-    filtered = [note for note in notes if min_note <= note.midi_number <= max_note]
-    
-    removed_count = len(notes) - len(filtered)
-    if removed_count > 0:
-        print(f"ℹ Filtered out {removed_count} notes outside guitar range ({min_note}-{max_note})")
-    
+    # Grab just the name portion (defence against path traversal)
+    basename = Path(filename).name
+    # Extract extension, lower-cased
+    ext = Path(basename).suffix.lower()
+    # Ensure it's something we recognise; fall back to .tmp
+    if ext not in ALLOWED_EXTENSIONS:
+        ext = '.tmp'
+    return ext
+
+
+def filter_notes_to_guitar_range(notes, tuning, max_fret: int = 22):
+    """Filter MIDI notes to only those playable on guitar with the given tuning."""
+    min_note = min(tuning)
+    max_note = max(tuning) + max_fret
+
+    filtered = [n for n in notes if min_note <= n.midi_number <= max_note]
+
+    removed = len(notes) - len(filtered)
+    if removed > 0:
+        print(f"ℹ Filtered out {removed} notes outside guitar range ({min_note}–{max_note})")
+
     return filtered
+
+
+# ── App setup ────────────────────────────────────────────────────────────────
 
 app = FastAPI(
     title="AxTone API",
     description="Convert audio files to guitar tablature using AI",
-    version="1.0.0"
+    version="1.0.0",
 )
 
-ALLOWED_ORIGINS = os.getenv(
-    "ALLOWED_ORIGINS",
-    "http://localhost:3000,http://127.0.0.1:3000"
-).split(",")
+# Read allowed origins from environment; default to localhost for development.
+ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv(
+        "ALLOWED_ORIGINS",
+        "http://localhost:3000,http://127.0.0.1:3000",
+    ).split(",")
+    if origin.strip()
+]
 
 print(f"🌐 CORS Allowed Origins: {ALLOWED_ORIGINS}")
 
-# Enable CORS for Next.js frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for now
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Preset tunings
-TUNINGS = {
-    'standard': [40, 45, 50, 55, 59, 64],  # E2-A2-D3-G3-B3-E4
-    'drop-d': [38, 45, 50, 55, 59, 64],    # D2-A2-D3-G3-B3-E4
-    'drop-c': [36, 43, 48, 53, 57, 62],    # C2-G2-C3-F3-A3-D4
-    'open-g': [38, 43, 50, 55, 59, 62],    # D2-G2-D3-G3-B3-D4
-    'dadgad': [38, 45, 50, 55, 45, 50],    # D2-A2-D3-G3-A3-D4
-}
 
+# ── Routes ───────────────────────────────────────────────────────────────────
 
 @app.get("/")
 async def root():
-    """Root endpoint - API info"""
-    return {
-        "service": "AxTone API",
-        "version": "1.0.0",
-        "status": "running"
-    }
+    """Root endpoint — API info."""
+    return {"service": "AxTone API", "version": "1.0.0", "status": "running"}
 
 
 @app.get("/api/health")
 async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "ok",
-        "service": "AxTone API"
-    }
+    """Health check endpoint."""
+    return {"status": "ok", "service": "AxTone API"}
 
 
 @app.get("/api/tunings")
 async def get_tunings():
-    """Get available guitar tunings"""
+    """Get available guitar tunings."""
     return {
         "tunings": [
             {"value": "standard", "label": "Standard (E-A-D-G-B-E)"},
-            {"value": "drop-d", "label": "Drop D (D-A-D-G-B-E)"},
-            {"value": "drop-c", "label": "Drop C (C-G-C-F-A-D)"},
-            {"value": "open-g", "label": "Open G (D-G-D-G-B-D)"},
-            {"value": "dadgad", "label": "DADGAD (D-A-D-G-A-D)"},
+            {"value": "drop-d",   "label": "Drop D (D-A-D-G-B-E)"},
+            {"value": "drop-c",   "label": "Drop C (C-G-C-F-A-D)"},
+            {"value": "open-g",   "label": "Open G (D-G-D-G-B-D)"},
+            {"value": "dadgad",   "label": "DADGAD (D-A-D-G-A-D)"},
         ]
     }
 
@@ -113,175 +138,217 @@ async def convert_audio_to_tab(
     tuning: str = Form("standard"),
     min_duration: float = Form(0.1),
     detailed: bool = Form(False),
-    preprocess: bool = Form(False)
+    preprocess: bool = Form(False),
 ):
     """
-    Convert audio file to guitar tablature.
-    
-    Parameters:
-    - file: Audio file (.mp3, .wav, .flac, .ogg, .m4a)
-    - method: Pitch detection method (only 'pyin' supported)
-    - tuning: Guitar tuning preset (standard, drop-d, drop-c, open-g, dadgad)
-    - min_duration: Minimum note duration in seconds (default: 0.1)
-    - detailed: Include detailed note information (default: False)
-    - preprocess: Preprocess audio (normalize and trim) (default: False)
-    
-    Returns:
-    - JSON with tablature, statistics, and optional detailed note info
-    
-    Note: Basic Pitch removed to reduce server memory usage on free tier.
+    Convert an audio file to guitar tablature.
+
+    Parameters
+    ----------
+    file        : Audio file (.mp3 .wav .flac .ogg .m4a .aac) — max 50 MB
+    method      : Pitch detection method (only 'pyin' is supported)
+    tuning      : Guitar tuning preset or comma-separated MIDI numbers
+    min_duration: Minimum note duration in seconds (default 0.1)
+    detailed    : Include per-note detail in the response (default False)
+    preprocess  : Unused — kept for API compatibility (default False)
+
+    Returns
+    -------
+    JSON with tablature, statistics, and optional per-note data.
     """
-    
-    # Validate file type
-    allowed_extensions = ('.mp3', '.wav', '.flac', '.ogg', '.m4a', '.aac')
-    if not file.filename or not file.filename.lower().endswith(allowed_extensions):
+
+    # ── Validate filename / extension ─────────────────────────────────────
+    raw_filename = file.filename or ""
+    if not raw_filename:
+        raise HTTPException(status_code=400, detail="No filename provided.")
+
+    ext = sanitize_filename(raw_filename)
+    if ext == '.tmp':
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported file format. Allowed: {', '.join(allowed_extensions)}"
+            detail=(
+                f"Unsupported file format. "
+                f"Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+            ),
         )
-    
-    # Only PYIN method supported (Basic Pitch removed to reduce memory usage)
-    if method != 'pyin':
+
+    # ── Only pyin supported server-side ──────────────────────────────────
+    if method != "pyin":
         raise HTTPException(
             status_code=400,
-            detail="Only 'pyin' method is supported. Basic Pitch removed to reduce server memory usage."
+            detail="Only 'pyin' detection is supported on this server.",
         )
-    
+
+    # ── Read file content + size check (Streaming) ────────────────────────
     tmp_path = None
-    
+    midi_path = None
+
     try:
-        # Save uploaded file temporarily
-        suffix = Path(file.filename).suffix
-        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-            content = await file.read()
-            tmp.write(content)
+        # Write directly to disk in chunks to save memory
+        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
             tmp_path = tmp.name
-        
-        print(f"Processing file: {file.filename}")
-        print(f"Method: {method}, Tuning: {tuning}, Min Duration: {min_duration}")
-        
-        # Extract MIDI notes
+            total_size = 0
+            chunk_size = 1024 * 1024  # 1 MB chunks
+            
+            while True:
+                chunk = await file.read(chunk_size)
+                if not chunk:
+                    break
+                total_size += len(chunk)
+                if total_size > MAX_FILE_SIZE_BYTES:
+                    # Exceeded limit; clean up and reject
+                    os.unlink(tmp_path)
+                    raise HTTPException(
+                        status_code=413,
+                        detail=(
+                            f"File too large. "
+                            f"Maximum allowed size is {MAX_FILE_SIZE_BYTES // (1024*1024)} MB."
+                        ),
+                    )
+                tmp.write(chunk)
+
+        print(f"Processing: {raw_filename!r}  →  temp: {tmp_path} ({total_size} bytes)")
+
+        # ── Audio duration check ──────────────────────────────────────────
+        try:
+            # get_duration reads headers without loading the full audio array
+            duration = librosa.get_duration(path=tmp_path)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail="Invalid or corrupt audio file.")
+            
+        if duration > MAX_DURATION_SECONDS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Audio is too long ({duration:.1f}s). Maximum allowed is {MAX_DURATION_SECONDS} seconds."
+            )
+        print(f"Audio duration: {duration:.1f}s (Method: {method}, Tuning: {tuning})")
+
+        # ── Extract MIDI notes ────────────────────────────────────────────
         extractor = AudioExtractor(method=method, min_note_duration=min_duration)
-        midi_notes = extractor.extract(tmp_path)
         
+        # Limit concurrent CPU-heavy extractions so we don't OOM the server
+        async with processing_semaphore:
+            print(f"Acquired lock. Extracting notes for {tmp_path}...")
+            # Run the synchronous ML task in a threadpool so we don't block FastAPI
+            midi_notes = await run_in_threadpool(extractor.extract, tmp_path)
+
         if not midi_notes:
             raise HTTPException(
                 status_code=400,
-                detail="No notes detected in audio file. Try using a clearer recording or adjusting the min_duration parameter."
+                detail=(
+                    "No notes detected in the audio file. "
+                    "Try a clearer recording or a smaller min_duration value."
+                ),
             )
-        
-        print(f"✓ Extracted {len(midi_notes)} notes")
-        
-        # Get tuning
+
+        print(f"✓ Extracted raw {len(midi_notes)} notes")
+
+        # ── Consolidate & Denoise ─────────────────────────────────────────
+        from src.extractor import consolidate_notes
+        midi_notes = consolidate_notes(midi_notes)
+        if not midi_notes:
+            raise HTTPException(
+                status_code=400,
+                detail="No notes remained after denoising. Try a cleaner recording.",
+            )
+        print(f"✓ After denoising: {len(midi_notes)} notes")
+
+        # ── Resolve tuning ────────────────────────────────────────────────
         if tuning in TUNINGS:
             tuning_notes = TUNINGS[tuning]
         else:
             try:
-                # Try parsing as comma-separated MIDI numbers
-                tuning_notes = [int(x.strip()) for x in tuning.split(',')]
+                tuning_notes = [int(x.strip()) for x in tuning.split(",")]
                 if len(tuning_notes) != 6:
-                    raise ValueError("Custom tuning must have 6 strings")
-            except Exception as e:
+                    raise ValueError("Need exactly 6 values")
+            except Exception:
                 raise HTTPException(
                     status_code=400,
-                    detail=f"Invalid tuning: {tuning}. Use preset names or comma-separated MIDI numbers."
+                    detail=(
+                        f"Invalid tuning '{tuning}'. "
+                        f"Use a preset ({', '.join(TUNINGS)}) or "
+                        f"comma-separated MIDI numbers for all 6 strings."
+                    ),
                 )
-        
-        # Filter notes to guitar range (IMPORTANT for basic_pitch which may detect out-of-range notes)
+
+        # ── Filter to guitar range ────────────────────────────────────────
         midi_notes = filter_notes_to_guitar_range(midi_notes, tuning_notes, max_fret=22)
-        
         if not midi_notes:
             raise HTTPException(
                 status_code=400,
-                detail="No playable notes found within guitar range. Try a different audio file or tuning."
+                detail=(
+                    "No playable notes found within guitar range. "
+                    "Try a different tuning or audio file."
+                ),
             )
-        
+
         print(f"✓ {len(midi_notes)} notes within guitar range")
-        
-        # Optimize fingering
+
+        # ── Optimize fingering ────────────────────────────────────────────
         optimizer = FretboardOptimizer(tuning=tuning_notes)
-        path = optimizer.optimize(midi_notes)
-        
+        path, _ = optimizer.optimize(midi_notes)  # optimize() returns (path, tablature)
+
         if not path:
             raise HTTPException(
                 status_code=400,
-                detail="Could not find valid fingering path. Notes might be outside guitar range or incompatible with the selected tuning."
+                detail=(
+                    "Could not find a valid fingering path. "
+                    "The notes may be outside guitar range for the selected tuning."
+                ),
             )
-        
-        print(f"✓ Optimized fingering path")
-        
-        # Format tablature (clean format without headers for web display)
+
+        print("✓ Optimized fingering path")
+
+        # ── Format tablature ──────────────────────────────────────────────────
+        # Pass hand_positions so the formatter can render position markers
+        hand_positions = optimizer.hand_positions if optimizer.hand_positions else None
         formatter = TablatureFormatter()
-        tablature = formatter.format(path, midi_notes, clean=True)
-        
-        # Calculate statistics
+        tablature = formatter.format(path, midi_notes, hand_positions=hand_positions, clean=True)
+
+        # ── Statistics ────────────────────────────────────────────────────
         midi_nums = [n.midi_number for n in midi_notes]
-        min_note = min(midi_nums)
-        max_note = max(midi_nums)
-        
-        # Calculate average fret movement and string jumps
-        total_fret_distance = 0
-        total_string_jumps = 0
-        
-        for i in range(1, len(path)):
-            prev_pos = path[i-1]
-            curr_pos = path[i]
-            
-            # Fret distance
-            total_fret_distance += abs(curr_pos.fret - prev_pos.fret)
-            
-            # String jumps
-            if prev_pos.string != curr_pos.string:
-                total_string_jumps += 1
-        
+        total_fret_distance = sum(
+            abs(path[i].fret - path[i - 1].fret) for i in range(1, len(path))
+        )
+        total_string_jumps = sum(
+            1 for i in range(1, len(path)) if path[i].string != path[i - 1].string
+        )
         avg_fret_movement = total_fret_distance / len(path) if len(path) > 1 else 0
         avg_string_jumps = total_string_jumps / len(path) if len(path) > 1 else 0
-        
-        # Prepare response
-        response = {
+
+        response: dict = {
             "success": True,
             "tablature": tablature,
             "stats": {
                 "total_notes": len(midi_notes),
                 "pitch_range": {
-                    "min": midi_number_to_note_name(min_note),
-                    "max": midi_number_to_note_name(max_note),
-                    "min_midi": min_note,
-                    "max_midi": max_note
+                    "min": midi_number_to_note_name(min(midi_nums)),
+                    "max": midi_number_to_note_name(max(midi_nums)),
+                    "min_midi": min(midi_nums),
+                    "max_midi": max(midi_nums),
                 },
                 "avg_fret_movement": round(avg_fret_movement, 2),
                 "avg_string_jumps": round(avg_string_jumps, 2),
-                "tuning_used": tuning
-            }
+                "tuning_used": tuning,
+            },
         }
-        
-        # Generate and include MIDI file as base64
-        midi_path = None
+
+        # ── Optional MIDI export ──────────────────────────────────────────
         try:
-            # Create temporary MIDI file
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.mid') as midi_tmp:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mid") as midi_tmp:
                 midi_path = midi_tmp.name
-            
-            # Save MIDI using extractor
+
             extractor.save_midi(midi_notes, midi_path)
-            
-            # Read and encode as base64
-            with open(midi_path, 'rb') as midi_file:
-                midi_data = base64.b64encode(midi_file.read()).decode('utf-8')
-                response["midi_base64"] = midi_data
+
+            with open(midi_path, "rb") as midi_file:
+                response["midi_base64"] = base64.b64encode(midi_file.read()).decode("utf-8")
         except Exception as e:
             print(f"Warning: Could not generate MIDI: {e}")
             response["midi_base64"] = None
-        finally:
-            # Cleanup MIDI temp file
-            if midi_path and os.path.exists(midi_path):
-                try:
-                    os.unlink(midi_path)
-                except:
-                    pass
-        
-        # Add detailed note information if requested
+
+        # ── Optional per-note detail ──────────────────────────────────────
         if detailed:
+            hp_list = optimizer.hand_positions if optimizer.hand_positions else [None] * len(path)
             response["notes"] = [
                 {
                     "midi": note.midi_number,
@@ -290,36 +357,31 @@ async def convert_audio_to_tab(
                     "offset": round(note.offset, 3),
                     "duration": round(note.offset - note.onset, 3),
                     "string": pos.string,
-                    "fret": pos.fret
+                    "fret": pos.fret,
+                    "hand_position": hp,
                 }
-                for note, pos in zip(midi_notes, path)
+                for note, pos, hp in zip(midi_notes, path, hp_list)
             ]
-        
-        print(f"✓ Conversion complete!")
+
+        print("✓ Conversion complete!")
         return JSONResponse(response)
-    
+
     except HTTPException:
-        # Re-raise HTTP exceptions
         raise
-    
+
     except Exception as e:
-        # Log the error and return a generic error response
-        print(f"Error during conversion: {str(e)}")
+        print(f"Error during conversion: {e}")
         import traceback
         traceback.print_exc()
-        
-        raise HTTPException(
-            status_code=500,
-            detail=f"Internal server error: {str(e)}"
-        )
-    
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+
     finally:
-        # Cleanup temporary file
-        if tmp_path and os.path.exists(tmp_path):
-            try:
-                os.unlink(tmp_path)
-            except Exception as e:
-                print(f"Warning: Could not delete temp file {tmp_path}: {e}")
+        for path_to_clean in (tmp_path, midi_path):
+            if path_to_clean and os.path.exists(path_to_clean):
+                try:
+                    os.unlink(path_to_clean)
+                except Exception as cleanup_err:
+                    print(f"Warning: Could not delete temp file {path_to_clean}: {cleanup_err}")
 
 
 if __name__ == "__main__":
@@ -328,6 +390,6 @@ if __name__ == "__main__":
     print("Starting AxTone API Server")
     print("=" * 80)
     print("API Documentation: http://localhost:8000/docs")
-    print("API Endpoint: http://localhost:8000/api/convert")
+    print("API Endpoint:      http://localhost:8000/api/convert")
     print("=" * 80)
     uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")

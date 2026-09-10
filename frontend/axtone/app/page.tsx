@@ -192,6 +192,7 @@ export default function Home() {
             <div ref={fretboardRef} className="mt-12">
               <InteractiveFretboard 
                 isPlaying={isPlaying} 
+                onPlayingChange={handlePlayToggle}
                 notes={result.notes || []}
               />
             </div>
